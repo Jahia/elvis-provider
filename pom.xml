@@ -80,7 +80,19 @@
             </snapshots>
         </repository>
     </repositories>
-
+    <dependencies>
+        <dependency>
+            <groupId>org.jahia.modules</groupId>
+            <artifactId>external-provider</artifactId>
+            <version>3.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5</version>
+        </dependency>
+    </dependencies>
     <build>
         <plugins>
             <plugin>
@@ -89,7 +101,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Jahia-Depends>default</Jahia-Depends>
+                        <Jahia-Depends>default,external-provider,assets</Jahia-Depends>
                     </instructions>
                 </configuration>
             </plugin>
