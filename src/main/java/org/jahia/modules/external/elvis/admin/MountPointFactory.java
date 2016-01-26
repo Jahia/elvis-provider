@@ -7,7 +7,6 @@ import org.jahia.modules.external.admin.mount.validator.LocalJCRFolder;
 import org.jahia.services.content.JCRNodeWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.jcr.PathNotFoundException;
 import javax.jcr.RepositoryException;
@@ -17,9 +16,9 @@ import javax.jcr.RepositoryException;
  */
 public class MountPointFactory extends AbstractMountPointFactory {
     private static final Logger logger = LoggerFactory.getLogger(MountPointFactory.class);
-    protected static final String URL = "url";
-    protected static final String USER_NAME = "userName";
-    protected static final String PASSWORD = "password";
+    public static final String URL = "url";
+    public static final String USER_NAME = "userName";
+    public static final String PASSWORD = "password";
 
     @NotEmpty
     private String name;

@@ -60,15 +60,15 @@ public class MountPointFactoryHandler extends AbstractMountPointFactoryHandler<M
         Locale locale = LocaleContextHolder.getLocale();
         try {
             boolean available = super.save(mountPointFactory);
-            if(available) {
+            if (available) {
                 return true;
             } else {
-                MessageBuilder messageBuilder = new MessageBuilder().warning().defaultText(Messages.get(BUNDLE, "serverSettings.dalimMountPointFactory.save.unavailable", locale));
+                MessageBuilder messageBuilder = new MessageBuilder().warning().defaultText(Messages.get(BUNDLE, "serverSettings.elvis.mountPointFactory.save.unavailable", locale));
                 messageContext.addMessage(messageBuilder.build());
             }
         } catch (RepositoryException e) {
             logger.error("Error saving mount point " + mountPointFactory.getName(), e);
-            MessageBuilder messageBuilder = new MessageBuilder().error().defaultText(Messages.get(BUNDLE, "serverSettings.dalimMountPointFactory.save.error", locale));
+            MessageBuilder messageBuilder = new MessageBuilder().error().defaultText(Messages.get(BUNDLE, "serverSettings.elvis.mountPointFactory.save.error", locale));
             messageContext.addMessage(messageBuilder.build());
         }
         return false;
