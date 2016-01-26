@@ -1,8 +1,11 @@
 package org.jahia.modules.external.elvis;
 
+import org.jahia.exceptions.JahiaInitializationException;
 import org.jahia.modules.external.ExternalContentStoreProvider;
+import org.jahia.modules.external.elvis.admin.MountPointFactory;
 import org.jahia.services.SpringContextSingleton;
 import org.jahia.services.content.JCRNodeWrapper;
+import org.jahia.services.content.JCRSessionFactory;
 import org.jahia.services.content.JCRStoreProvider;
 import org.jahia.services.content.ProviderFactory;
 import org.slf4j.Logger;
@@ -41,18 +44,32 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
             logger.info("Elvis external provider module initialization: mountPoint.getPath() - " + mountPoint.getPath() + ", name - " + mountPoint.getName());
 
         // Define the provider basing on the mount point parameters
-        ExternalContentStoreProvider externalContentStoreProvider = (ExternalContentStoreProvider) SpringContextSingleton.getBean("ExternalContentStoreProvider");
+        ExternalContentStoreProvider externalContentStoreProvider = (ExternalContentStoreProvider) SpringContextSingleton.getBean("ExternalStoreProviderPrototype");
         externalContentStoreProvider.setKey(mountPoint.getIdentifier());
         externalContentStoreProvider.setMountPoint(mountPoint.getPath());
 
         // Define the datasource using the credentials defined in the mount point
-
+        ElvisDataSource dataSource = new ElvisDataSource();
+        dataSource.setUrl(mountPoint.getPropertyAsString(MountPointFactory.URL));
+        dataSource.setUserName(mountPoint.getPropertyAsString(MountPointFactory.USER_NAME));
+        dataSource.setPassword(mountPoint.getPropertyAsString(MountPointFactory.PASSWORD));
         // Set provider and configuration object in the datasource
-
+//        ElvisConfiguration configuration = (ElvisConfiguration) applicationContext.getBean("ElvisConfiguration");
+//        dataSource.setConfiguration(configuration);
+        dataSource.setExternalContentStoreProvider(externalContentStoreProvider);
         // Start the datasource
-
+        dataSource.start();
         // Finalize the provider setup with datasource and some JCR parameters
+        externalContentStoreProvider.setDataSource(dataSource);
+        externalContentStoreProvider.setDynamicallyMounted(true);
+        externalContentStoreProvider.setSessionFactory(JCRSessionFactory.getInstance());
 
+        try {
+            externalContentStoreProvider.start();
+        } catch (JahiaInitializationException e) {
+            logger.error(e.getMessage(), e);
+            e.printStackTrace();
+        }
         if (logger.isDebugEnabled())
             logger.info("Elvis external provider module initialized");
         return externalContentStoreProvider;
