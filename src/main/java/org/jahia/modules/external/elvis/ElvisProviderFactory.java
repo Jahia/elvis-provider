@@ -53,9 +53,7 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
         dataSource.setUrl(mountPoint.getPropertyAsString(MountPointFactory.URL));
         dataSource.setUserName(mountPoint.getPropertyAsString(MountPointFactory.USER_NAME));
         dataSource.setPassword(mountPoint.getPropertyAsString(MountPointFactory.PASSWORD));
-        // Set provider and configuration object in the datasource
-//        ElvisConfiguration configuration = (ElvisConfiguration) applicationContext.getBean("ElvisConfiguration");
-//        dataSource.setConfiguration(configuration);
+        // Set provider in the datasource
         dataSource.setExternalContentStoreProvider(externalContentStoreProvider);
         // Start the datasource
         dataSource.start();
