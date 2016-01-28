@@ -114,7 +114,30 @@ public class ElvisDataSource extends FilesDataSource {
                 }
             }
 
-            return new ElvisBinaryImpl(originalUrl, fileSize, this.context, this.httpClient);
+            return new ElvisBinaryImpl(originalUrl, fileSize, this.context, this.httpClient, false);
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+            return null;
+        }
+    }
+
+    @Override
+    public Binary getThumbnailBinary(String path) throws PathNotFoundException {
+        try {
+            String thumbnailUrl = "";
+            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
+            if (searchResponse.getStatusLine().getStatusCode() == 200) {
+                JSONObject jsonObject = new JSONObject(EntityUtils.toString(searchResponse.getEntity()));
+                if (jsonObject.has("hits")) {
+                    JSONArray searchJsonArray = jsonObject.getJSONArray("hits");
+                    for (int i = 0 ; i < searchJsonArray.length() ; i++) {
+                        JSONObject element = searchJsonArray.getJSONObject(i);
+                        thumbnailUrl = element.getString("thumbnailUrl");
+                    }
+                }
+            }
+
+            return new ElvisBinaryImpl(thumbnailUrl, -1, this.context, this.httpClient, true);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
             return null;

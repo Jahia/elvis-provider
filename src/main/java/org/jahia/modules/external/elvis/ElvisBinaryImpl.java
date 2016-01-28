@@ -23,15 +23,17 @@ public class ElvisBinaryImpl implements Binary {
 
     String url;
     long fileSize;
+    boolean getSize;
     HttpClientContext context;
     byte[] currentBinaryContent;
     CloseableHttpClient httpClient;
 
-    public ElvisBinaryImpl(String url, long fileSize, HttpClientContext context, CloseableHttpClient httpClient) {
+    public ElvisBinaryImpl(String url, long fileSize, HttpClientContext context, CloseableHttpClient httpClient, boolean getSize) {
         this.url = url;
         this.fileSize = fileSize;
         this.httpClient = httpClient;
         this.context = context;
+        this.getSize = getSize;
     }
 
     @Override
@@ -73,6 +75,11 @@ public class ElvisBinaryImpl implements Binary {
 
     @Override
     public long getSize() throws RepositoryException {
+        if (getSize) {
+            if (currentBinaryContent == null)
+                getStream();
+            fileSize = currentBinaryContent.length;
+        }
         return fileSize;
     }
 }

@@ -99,6 +99,7 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
 
     private static final List<String> JCR_CONTENT_LIST = Arrays.asList(Constants.JCR_CONTENT);
     private static final String JCR_CONTENT_SUFFIX = "/" + Constants.JCR_CONTENT;
+    private static final String THUMBNAIL_SUFFIX = "/thumbnail";
 
     public boolean isSupportsUuid() {
         return false;
@@ -137,6 +138,8 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
     public ExternalData getItemByPath(String path) throws PathNotFoundException {
         if (path.endsWith(JCR_CONTENT_SUFFIX)) {
             return getFileContent(getExternalFile(StringUtils.substringBeforeLast(path, JCR_CONTENT_SUFFIX)));
+        } else if (path.endsWith(THUMBNAIL_SUFFIX)) {
+            return getThumbnailContent(getExternalFile(StringUtils.substringBeforeLast(path, THUMBNAIL_SUFFIX)));
         } else {
             return getExternalFile(path);
         }
@@ -148,10 +151,15 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
 
     public abstract Binary getFileBinary(String path) throws PathNotFoundException ;
 
+    public abstract Binary getThumbnailBinary(String path) throws PathNotFoundException ;
+
     public List<String> getChildren(String path) throws RepositoryException {
-        if (!path.endsWith(JCR_CONTENT_SUFFIX)) {
+        if (!path.endsWith(JCR_CONTENT_SUFFIX) || !path.endsWith(THUMBNAIL_SUFFIX)) {
             ExternalFile externalFile = getExternalFile(path);
             if (externalFile.getType().equals(Constants.JAHIANT_FILE)) {
+                if (externalFile.getMixin().contains(Constants.JAHIAMIX_IMAGE))
+                    return Arrays.asList(Constants.JCR_CONTENT, "thumbnail");
+
                 return JCR_CONTENT_LIST;
             } else if (externalFile.getType().equals(Constants.JAHIANT_FOLDER)) {
                 List<ExternalFile> files = getChildrenFiles(path);
@@ -172,10 +180,14 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
 
     @Override
     public List<ExternalData> getChildrenNodes(String path) throws RepositoryException {
-        if (!path.endsWith(JCR_CONTENT_SUFFIX)) {
+        if (!path.endsWith(JCR_CONTENT_SUFFIX) || !path.endsWith(THUMBNAIL_SUFFIX)) {
             ExternalFile externalFile = getExternalFile(path);
             if (externalFile.getType().equals(Constants.JAHIANT_FILE)) {
-                return Collections.singletonList(getFileContent(externalFile));
+                List<ExternalData> externalDatas = new ArrayList<>();
+                externalDatas.add(getFileContent(externalFile));
+                if (externalFile.getMixin().contains(Constants.JAHIAMIX_IMAGE))
+                    externalDatas.add(getThumbnailContent(externalFile));
+                return externalDatas;
             } else if (externalFile.getType().equals(Constants.JAHIANT_FOLDER)) {
                 List<ExternalFile>  files = getChildrenFiles(externalFile.getPath());
                 if (files.size() > 0) {
@@ -184,6 +196,8 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
                         children.add(object);
                         if (object.getType().equals(Constants.JAHIANT_FILE)) {
                             children.add(getFileContent(object));
+                            if (object.getMixin().contains(Constants.JAHIAMIX_IMAGE))
+                                children.add(getThumbnailContent(object));
                         }
                     }
                     return children;
@@ -205,6 +219,23 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
 
         String jcrContentPath = file.getPath() + "/" + Constants.JCR_CONTENT;
         ExternalData externalData = new ExternalData(jcrContentPath, jcrContentPath, Constants.JAHIANT_RESOURCE, properties);
+
+        Map<String, Binary[]> binaryProperties = new HashMap<String, Binary[]>(1);
+        binaryProperties.put(Constants.JCR_DATA, new Binary[]{content});
+        externalData.setBinaryProperties(binaryProperties);
+
+        return externalData;
+    }
+
+    protected ExternalData getThumbnailContent(ExternalFile file) throws PathNotFoundException {
+        Map<String, String[]> properties = new HashMap<String, String[]>(1);
+
+        Binary content = getThumbnailBinary(file.getPath());
+
+        properties.put(Constants.JCR_MIMETYPE, new String[]{getContentType(file)});
+
+        String thumbnailContentPath = file.getPath() + THUMBNAIL_SUFFIX;
+        ExternalData externalData = new ExternalData(thumbnailContentPath, thumbnailContentPath, Constants.JAHIANT_RESOURCE, properties);
 
         Map<String, Binary[]> binaryProperties = new HashMap<String, Binary[]>(1);
         binaryProperties.put(Constants.JCR_DATA, new Binary[]{content});
