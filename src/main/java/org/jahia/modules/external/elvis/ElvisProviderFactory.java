@@ -16,6 +16,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
 import javax.jcr.RepositoryException;
+import java.util.Arrays;
 
 /**
  * @author Damien GAILLARD
@@ -61,6 +62,7 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
         externalContentStoreProvider.setDataSource(dataSource);
         externalContentStoreProvider.setDynamicallyMounted(true);
         externalContentStoreProvider.setSessionFactory(JCRSessionFactory.getInstance());
+        externalContentStoreProvider.setReservedNodes(Arrays.asList("j:acl", "j:workflowRules", "j:conditionalVisibility"));
 
         try {
             externalContentStoreProvider.start();

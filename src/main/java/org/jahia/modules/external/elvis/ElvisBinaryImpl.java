@@ -75,11 +75,11 @@ public class ElvisBinaryImpl implements Binary {
 
     @Override
     public long getSize() throws RepositoryException {
-        if (getSize) {
-            if (currentBinaryContent == null)
-                getStream();
-            fileSize = currentBinaryContent.length;
-        }
+//        if (getSize) {
+//            if (currentBinaryContent == null)
+//                getStream();
+//            fileSize = currentBinaryContent.length;
+//        }
         return fileSize;
     }
 }
