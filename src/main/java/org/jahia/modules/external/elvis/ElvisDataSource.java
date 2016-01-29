@@ -46,16 +46,20 @@ public class ElvisDataSource extends FilesDataSource {
                 CloseableHttpResponse searchResponse = getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
                 if (searchResponse.getStatusLine().getStatusCode() == 200) {
                     JSONObject jsonObject = new JSONObject(EntityUtils.toString(searchResponse.getEntity()));
-                    if (jsonObject.has("hits")) {
-                        JSONArray searchJsonArray = jsonObject.getJSONArray("hits");
-                        if (searchJsonArray.length() > 0) {
-                            return createExternalFile(searchJsonArray, 0);
-                        } else {
-                            return new ExternalFile(ExternalFile.FileType.FOLDER, path, null, null);
+                    if (!jsonObject.has("errorcode")) {
+                        if (jsonObject.has("hits")) {
+                            JSONArray searchJsonArray = jsonObject.getJSONArray("hits");
+                            if (searchJsonArray.length() > 0) {
+                                return createExternalFile(searchJsonArray, 0);
+                            } else {
+                                return new ExternalFile(ExternalFile.FileType.FOLDER, path, null, null);
+                            }
                         }
+                    } else {
+                        throw new PathNotFoundException("The request could not be executed please check your Elvis API credential");
                     }
                 }
-                return null;
+                throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
                 return null;
@@ -69,20 +73,27 @@ public class ElvisDataSource extends FilesDataSource {
         try {
             CloseableHttpResponse browseResponse = getDataFromApi("/browse?path=" + WebUtils.escapePath(path));
             if (browseResponse.getStatusLine().getStatusCode() == 200) {
-                JSONArray jsonArray = new JSONArray(EntityUtils.toString(browseResponse.getEntity()));
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject element = jsonArray.getJSONObject(i);
-                    childrenList.add(new ExternalFile(ExternalFile.FileType.FOLDER, element.getString("assetPath"), null, null));
+                try {
+                    JSONArray jsonArray = new JSONArray(EntityUtils.toString(browseResponse.getEntity()));
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject element = jsonArray.getJSONObject(i);
+                        childrenList.add(new ExternalFile(ExternalFile.FileType.FOLDER, element.getString("assetPath"), null, null));
+                    }
+                } catch (JSONException e) {
+                    logger.error("Could not process JSON response probably due a connection problem with the API");
+                    return childrenList;
                 }
             }
 
             CloseableHttpResponse searchResponse = getDataFromApi("/search?q=folderPath:" + WebUtils.escapePath(path));
             if (searchResponse.getStatusLine().getStatusCode() == 200) {
                 JSONObject jsonObject = new JSONObject(EntityUtils.toString(searchResponse.getEntity()));
-                if (jsonObject.has("hits")) {
-                    JSONArray searchJsonArray = jsonObject.getJSONArray("hits");
-                    for (int i = 0 ; i < searchJsonArray.length() ; i++) {
-                        childrenList.add(createExternalFile(searchJsonArray, i));
+                if (!jsonObject.has("errorcode")) {
+                    if (jsonObject.has("hits")) {
+                        JSONArray searchJsonArray = jsonObject.getJSONArray("hits");
+                        for (int i = 0; i < searchJsonArray.length(); i++) {
+                            childrenList.add(createExternalFile(searchJsonArray, i));
+                        }
                     }
                 }
             }
