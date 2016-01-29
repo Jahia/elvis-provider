@@ -16,7 +16,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
 import javax.jcr.RepositoryException;
-import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author Damien GAILLARD
@@ -25,6 +25,7 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
     private static final Logger logger = LoggerFactory.getLogger(ElvisProviderFactory.class);
 
     private ApplicationContext applicationContext;
+    private List<String> reservedNodes;
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
@@ -62,7 +63,7 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
         externalContentStoreProvider.setDataSource(dataSource);
         externalContentStoreProvider.setDynamicallyMounted(true);
         externalContentStoreProvider.setSessionFactory(JCRSessionFactory.getInstance());
-        externalContentStoreProvider.setReservedNodes(Arrays.asList("j:acl", "j:workflowRules", "j:conditionalVisibility"));
+        externalContentStoreProvider.setReservedNodes(reservedNodes);
 
         try {
             externalContentStoreProvider.start();
@@ -73,5 +74,9 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
         if (logger.isDebugEnabled())
             logger.info("Elvis external provider module initialized");
         return externalContentStoreProvider;
+    }
+
+    public void setReservedNodes(List<String> reservedNodes) {
+        this.reservedNodes = reservedNodes;
     }
 }
