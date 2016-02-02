@@ -1,5 +1,6 @@
 package org.jahia.modules.external.elvis;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -125,7 +126,7 @@ public class ElvisDataSource extends FilesDataSource {
                 }
             }
 
-            return new ElvisBinaryImpl(originalUrl, fileSize, this.context, this.httpClient, false);
+            return new ElvisBinaryImpl(originalUrl, fileSize, this.context, this.httpClient);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
             return null;
@@ -143,12 +144,13 @@ public class ElvisDataSource extends FilesDataSource {
                     JSONArray searchJsonArray = jsonObject.getJSONArray("hits");
                     for (int i = 0 ; i < searchJsonArray.length() ; i++) {
                         JSONObject element = searchJsonArray.getJSONObject(i);
-                        thumbnailUrl = element.getString("thumbnailUrl");
+                        if (element.has("thumbnailUrl"))
+                            thumbnailUrl = element.getString("thumbnailUrl");
                     }
                 }
             }
 
-            return new ElvisBinaryImpl(thumbnailUrl, -1, this.context, this.httpClient, true);
+            return new ElvisBinaryImpl(thumbnailUrl, -1, this.context, this.httpClient);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
             return null;
@@ -197,6 +199,8 @@ public class ElvisDataSource extends FilesDataSource {
     }
 
     public void setUrl(String url) {
+        if (url.endsWith("/"))
+            url = StringUtils.substringBeforeLast(url, "/");
         this.url = url;
     }
 

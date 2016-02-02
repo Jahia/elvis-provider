@@ -163,7 +163,7 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
         if (!path.endsWith(JCR_CONTENT_SUFFIX) && !path.endsWith(THUMBNAIL_SUFFIX) && !path.endsWith(THUMBNAIL2_SUFFIX)) {
             ExternalFile externalFile = getExternalFile(path);
             if (externalFile.getType().equals(Constants.JAHIANT_FILE)) {
-                if (externalFile.getMixin().contains(Constants.JAHIAMIX_IMAGE))
+                if (externalFile.getMixin() != null && externalFile.getMixin().contains(Constants.JAHIAMIX_IMAGE))
                     return JMIX_IMAGE_LIST;
 
                 return JCR_CONTENT_LIST;
@@ -191,7 +191,7 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
             if (externalFile.getType().equals(Constants.JAHIANT_FILE)) {
                 List<ExternalData> externalDatas = new ArrayList<>();
                 externalDatas.add(getFileContent(externalFile));
-                if (externalFile.getMixin().contains(Constants.JAHIAMIX_IMAGE)) {
+                if (externalFile.getMixin() != null && externalFile.getMixin().contains(Constants.JAHIAMIX_IMAGE)) {
                     externalDatas.add(getThumbnailContent(externalFile, true));
                     externalDatas.add(getThumbnailContent(externalFile, false));
                 }
@@ -204,7 +204,7 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
                         children.add(object);
                         if (object.getType().equals(Constants.JAHIANT_FILE)) {
                             children.add(getFileContent(object));
-                            if (object.getMixin().contains(Constants.JAHIAMIX_IMAGE)) {
+                            if (object.getMixin() != null && object.getMixin().contains(Constants.JAHIAMIX_IMAGE)) {
                                 children.add(getThumbnailContent(object, true));
                                 children.add(getThumbnailContent(object, false));
                             }

@@ -23,17 +23,15 @@ public class ElvisBinaryImpl implements Binary {
 
     String url;
     long fileSize;
-    boolean getSize;
     HttpClientContext context;
     byte[] currentBinaryContent;
     CloseableHttpClient httpClient;
 
-    public ElvisBinaryImpl(String url, long fileSize, HttpClientContext context, CloseableHttpClient httpClient, boolean getSize) {
+    public ElvisBinaryImpl(String url, long fileSize, HttpClientContext context, CloseableHttpClient httpClient) {
         this.url = url;
         this.fileSize = fileSize;
         this.httpClient = httpClient;
         this.context = context;
-        this.getSize = getSize;
     }
 
     @Override
@@ -41,19 +39,22 @@ public class ElvisBinaryImpl implements Binary {
         if (currentBinaryContent != null)
             return new ByteArrayInputStream(currentBinaryContent);
 
-        if (StringUtils.isNotBlank(this.url) && this.httpClient != null && this.context != null) {
-            try {
+        try {
+            if (StringUtils.isNotBlank(this.url) && this.httpClient != null && this.context != null) {
                 HttpGet get = new HttpGet(this.url);
                 get.setHeader("Accept", "*/*");
                 CloseableHttpResponse httpResponse = this.httpClient.execute(get, this.context);
                 InputStream is = httpResponse.getEntity().getContent();
                 currentBinaryContent = IOUtils.toByteArray(is);
-                return new ByteArrayInputStream(currentBinaryContent);
-            } catch (IOException e) {
-                logger.error(e.getMessage(), e);
+            } else {
+                InputStream is = getClass().getResourceAsStream("/images/thumbnail-not-available.png");
+                currentBinaryContent = IOUtils.toByteArray(is);
             }
+        } catch (IOException e) {
+            logger.error(e.getMessage(), e);
+            currentBinaryContent = new byte[0];
         }
-        return null;
+        return new ByteArrayInputStream(currentBinaryContent);
     }
 
     @Override
@@ -75,11 +76,6 @@ public class ElvisBinaryImpl implements Binary {
 
     @Override
     public long getSize() throws RepositoryException {
-//        if (getSize) {
-//            if (currentBinaryContent == null)
-//                getStream();
-//            fileSize = currentBinaryContent.length;
-//        }
         return fileSize;
     }
 }
