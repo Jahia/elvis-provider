@@ -218,9 +218,15 @@ public class ElvisDataSource extends FilesDataSource {
         ExternalFile externalFile = new ExternalFile(ExternalFile.FileType.FILE, elPath, new Date(created), new Date(modified));
         if (elMetadata.has("description"))
             externalFile.getProperties().put(Constants.JCR_DESCRIPTION, new String[] {elMetadata.getString("description")});
+        if (elMetadata.has("assetCreator"))
+            externalFile.getProperties().put(Constants.JCR_CREATEDBY, new String[] {elMetadata.getString("assetCreator")});
+        if (elMetadata.has("assetModifier"))
+            externalFile.getProperties().put(Constants.JCR_LASTMODIFIEDBY, new String[] {elMetadata.getString("assetModifier")});
 
         String mimeType = elMetadata.getString("mimeType");
         externalFile.setContentType(mimeType);
+
+        // If file is an image
         externalFile.getProperties().put(Constants.JCR_MIMETYPE, new String[] {mimeType});
         if (mimeType.startsWith("image/")) {
             externalFile.setMixin(Arrays.asList(Constants.JAHIAMIX_IMAGE));
