@@ -11,6 +11,8 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalContentStoreProvider;
+import org.jahia.modules.external.ExternalDataSource;
+import org.jahia.modules.external.ExternalQuery;
 import org.jahia.utils.WebUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -27,7 +29,7 @@ import java.util.*;
 /**
  * @author Damien GAILLARD
  */
-public class ElvisDataSource extends FilesDataSource {
+public class ElvisDataSource extends FilesDataSource implements ExternalDataSource.Searchable {
     private static final Logger logger = LoggerFactory.getLogger(ElvisDataSource.class);
 
     private CookieStore cookieStore = new BasicCookieStore();
@@ -188,6 +190,11 @@ public class ElvisDataSource extends FilesDataSource {
         } catch (IOException e) {
             logger.error("Could not logout from the ELVIS API !", e.getMessage());
         }
+    }
+
+    @Override
+    public List<String> search(ExternalQuery query) throws RepositoryException {
+        return null;
     }
 
     public void setUserName(String userName) {
