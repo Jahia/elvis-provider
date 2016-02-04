@@ -26,7 +26,6 @@ package org.jahia.modules.external.elvis;
 import org.apache.commons.lang.StringUtils;
 import org.apache.jackrabbit.util.ISO8601;
 import org.jahia.api.Constants;
-import org.jahia.modules.external.ExternalContentStoreProvider;
 import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.external.ExternalDataSource;
 import org.jahia.services.content.JCRContentUtils;
@@ -47,15 +46,12 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
     private static final Logger logger = LoggerFactory.getLogger(FilesDataSource.class);
     private static final Set<String> SUPPORTED_NODE_TYPES = new HashSet<String>(Arrays.asList(Constants.JAHIANT_FILE, Constants.JAHIANT_FOLDER, Constants.JCR_CONTENT));
 
-    private ExternalContentStoreProvider contentStoreProvider;
-
     private static final String THUMBNAIL_CONSTANT = "thumbnail";
-    private static final String THUMBNAIL2_CONSTANT = "thumbnail2";
     private static final List<String> JCR_CONTENT_LIST = Arrays.asList(Constants.JCR_CONTENT);
-    private static final List<String> JMIX_IMAGE_LIST = Arrays.asList(Constants.JCR_CONTENT, THUMBNAIL_CONSTANT, THUMBNAIL2_CONSTANT);
+    private static final List<String> JMIX_IMAGE_LIST = Arrays.asList(Constants.JCR_CONTENT, THUMBNAIL_CONSTANT);
     private static final String JCR_CONTENT_SUFFIX = "/" + Constants.JCR_CONTENT;
     private static final String THUMBNAIL_SUFFIX = "/" + THUMBNAIL_CONSTANT;
-    private static final String THUMBNAIL2_SUFFIX = "/" + THUMBNAIL2_CONSTANT;
+    private static final String THUMBNAIL_MIME_TYPE = "image/jpeg";
 
     public boolean isSupportsUuid() {
         return false;
@@ -95,9 +91,7 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
         if (path.endsWith(JCR_CONTENT_SUFFIX)) {
             return getFileContent(getExternalFile(StringUtils.substringBeforeLast(path, JCR_CONTENT_SUFFIX)));
         } else if (path.endsWith(THUMBNAIL_SUFFIX)) {
-            return getThumbnailContent(getExternalFile(StringUtils.substringBeforeLast(path, THUMBNAIL_SUFFIX)), true);
-        } else if (path.endsWith(THUMBNAIL2_SUFFIX)) {
-            return getThumbnailContent(getExternalFile(StringUtils.substringBeforeLast(path, THUMBNAIL2_SUFFIX)), false);
+            return getThumbnailContent(getExternalFile(StringUtils.substringBeforeLast(path, THUMBNAIL_SUFFIX)));
         } else {
             return getExternalFile(path);
         }
@@ -107,17 +101,17 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
 
     public abstract List<ExternalFile> getChildrenFiles(String path) throws RepositoryException ;
 
-    public abstract Binary getFileBinary(String path) throws PathNotFoundException ;
+    public abstract Binary getFileBinary(ExternalFile file) throws PathNotFoundException ;
 
-    public abstract Binary getThumbnailBinary(String path) throws PathNotFoundException ;
+    public abstract Binary getThumbnailBinary(ExternalFile file) throws PathNotFoundException ;
 
     public List<String> getChildren(String path) throws RepositoryException {
-        if (!path.endsWith(JCR_CONTENT_SUFFIX) && !path.endsWith(THUMBNAIL_SUFFIX) && !path.endsWith(THUMBNAIL2_SUFFIX)) {
+        if (!path.endsWith(JCR_CONTENT_SUFFIX) && !path.endsWith(THUMBNAIL_SUFFIX)) {
             ExternalFile externalFile = getExternalFile(path);
             if (externalFile.getType().equals(Constants.JAHIANT_FILE)) {
-                if (externalFile.getMixin() != null && externalFile.getMixin().contains(Constants.JAHIAMIX_IMAGE))
+                if (externalFile.isHasThumbnail()) {
                     return JMIX_IMAGE_LIST;
-
+                }
                 return JCR_CONTENT_LIST;
             } else if (externalFile.getType().equals(Constants.JAHIANT_FOLDER)) {
                 List<ExternalFile> files = getChildrenFiles(path);
@@ -138,14 +132,13 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
 
     @Override
     public List<ExternalData> getChildrenNodes(String path) throws RepositoryException {
-        if (!path.endsWith(JCR_CONTENT_SUFFIX) && !path.endsWith(THUMBNAIL_SUFFIX) && !path.endsWith(THUMBNAIL2_SUFFIX)) {
+        if (!path.endsWith(JCR_CONTENT_SUFFIX) && !path.endsWith(THUMBNAIL_SUFFIX)) {
             ExternalFile externalFile = getExternalFile(path);
             if (externalFile.getType().equals(Constants.JAHIANT_FILE)) {
                 List<ExternalData> externalDatas = new ArrayList<>();
                 externalDatas.add(getFileContent(externalFile));
-                if (externalFile.getMixin() != null && externalFile.getMixin().contains(Constants.JAHIAMIX_IMAGE)) {
-                    externalDatas.add(getThumbnailContent(externalFile, true));
-                    externalDatas.add(getThumbnailContent(externalFile, false));
+                if (externalFile.isHasThumbnail()) {
+                    externalDatas.add(getThumbnailContent(externalFile));
                 }
                 return externalDatas;
             } else if (externalFile.getType().equals(Constants.JAHIANT_FOLDER)) {
@@ -156,9 +149,8 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
                         children.add(object);
                         if (object.getType().equals(Constants.JAHIANT_FILE)) {
                             children.add(getFileContent(object));
-                            if (object.getMixin() != null && object.getMixin().contains(Constants.JAHIAMIX_IMAGE)) {
-                                children.add(getThumbnailContent(object, true));
-                                children.add(getThumbnailContent(object, false));
+                            if (object.isHasThumbnail()) {
+                                children.add(getThumbnailContent(object));
                             }
                         }
                     }
@@ -173,34 +165,23 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
     }
 
     protected ExternalData getFileContent(ExternalFile file) throws PathNotFoundException {
-        Map<String, String[]> properties = new HashMap<String, String[]>(1);
-
-        Binary content = getFileBinary(file.getPath());
-
-        properties.put(Constants.JCR_MIMETYPE, new String[]{getContentType(file)});
-
-        String jcrContentPath = file.getPath() + "/" + Constants.JCR_CONTENT;
-        ExternalData externalData = new ExternalData(jcrContentPath, jcrContentPath, Constants.JAHIANT_RESOURCE, properties);
-
-        Map<String, Binary[]> binaryProperties = new HashMap<String, Binary[]>(1);
-        binaryProperties.put(Constants.JCR_DATA, new Binary[]{content});
-        externalData.setBinaryProperties(binaryProperties);
-
-        return externalData;
+        return getContentNode(file, getFileBinary(file), getContentType(file), JCR_CONTENT_SUFFIX);
     }
 
-    protected ExternalData getThumbnailContent(ExternalFile file, boolean isFirstThumbnail) throws PathNotFoundException {
-        Map<String, String[]> properties = new HashMap<String, String[]>(1);
+    protected ExternalData getThumbnailContent(ExternalFile file) throws PathNotFoundException {
+        return getContentNode(file, getThumbnailBinary(file), THUMBNAIL_MIME_TYPE, THUMBNAIL_SUFFIX);
+    }
 
-        Binary content = getThumbnailBinary(file.getPath());
+    private ExternalData getContentNode(ExternalFile file, Binary binary, String contentType, String suffix) throws PathNotFoundException {
+        Map<String, String[]> properties = new HashMap<>(1);
 
-        properties.put(Constants.JCR_MIMETYPE, new String[]{getContentType(file)});
+        properties.put(Constants.JCR_MIMETYPE, new String[]{contentType});
 
-        String thumbnailContentPath = file.getPath() + ((isFirstThumbnail)?THUMBNAIL_SUFFIX:THUMBNAIL2_SUFFIX);
-        ExternalData externalData = new ExternalData(thumbnailContentPath, thumbnailContentPath, Constants.JAHIANT_RESOURCE, properties);
+        String jcrContentPath = file.getPath() +  suffix;
+        ExternalData externalData = new ExternalData(jcrContentPath, jcrContentPath, Constants.JAHIANT_RESOURCE, properties);
 
-        Map<String, Binary[]> binaryProperties = new HashMap<String, Binary[]>(1);
-        binaryProperties.put(Constants.JCR_DATA, new Binary[]{content});
+        Map<String, Binary[]> binaryProperties = new HashMap<>(1);
+        binaryProperties.put(Constants.JCR_DATA, new Binary[]{binary});
         externalData.setBinaryProperties(binaryProperties);
 
         return externalData;
@@ -228,6 +209,8 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
 
         private String contentType;
 
+        private boolean hasThumbnail;
+
         public ExternalFile(FileType type, String path, Date lastModified, Date created) {
             super(path, path,
                     type == FileType.FILE ? Constants.JAHIANT_FILE : Constants.JAHIANT_FOLDER,
@@ -254,6 +237,14 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
 
         public void setContentType(String contentType) {
             this.contentType = contentType;
+        }
+
+        public boolean isHasThumbnail() {
+            return hasThumbnail;
+        }
+
+        public void setHasThumbnail(boolean hasThumbnail) {
+            this.hasThumbnail = hasThumbnail;
         }
     }
 }
