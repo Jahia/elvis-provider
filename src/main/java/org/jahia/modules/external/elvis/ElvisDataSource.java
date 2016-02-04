@@ -50,6 +50,8 @@ import java.io.*;
 import java.util.*;
 
 /**
+ * ExternalDataSource implementation for Elvis
+ *
  * @author Damien GAILLARD
  */
 public class ElvisDataSource extends FilesDataSource implements ExternalDataSource.Searchable {

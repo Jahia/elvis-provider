@@ -40,7 +40,7 @@ import javax.jcr.RepositoryException;
 import java.util.*;
 
 /**
- * Data source implementation for retrieving files. 
+ * Data source implementation for retrieving files.
  */
 public abstract class FilesDataSource implements ExternalDataSource, ExternalDataSource.CanLoadChildrenInBatch, ExternalDataSource.CanCheckAvailability, ExternalDataSource.Initializable  {
 
@@ -218,7 +218,7 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
     }
 
     /**
-     * TODO Comment me
+     * Object representation of a file or a folder
      *
      * @author toto
      */

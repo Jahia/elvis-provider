@@ -42,6 +42,8 @@ import javax.jcr.RepositoryException;
 import java.util.Locale;
 
 /**
+ * MountPointFactoryHandler to setup Elvis API properties using spring webflow
+ *
  * @author Damien GAILLARD
  */
 public class MountPointFactoryHandler extends AbstractMountPointFactoryHandler<MountPointFactory> {
