@@ -23,37 +23,41 @@
  */
 package org.jahia.modules.external.elvis;
 
+import java.util.*;
+
 /**
- * Configuration class to map Elvis <-> JCR type attributes.
- * Any attribute may be mapped in list of modes. Depends on mode attribute may support reade, write and be used on create.
- *
  * @author Damien GAILLARD
  */
-public class ElvisPropertyMapping {
-    private String jcrName;
-    private String elvisName;
+public class ElvisConfiguration {
+    private List<ElvisTypeMapping> typeMapping;
+    private Map<String, ElvisTypeMapping> elvisTypes;
+    private Map<String, ElvisTypeMapping> jcrTypes;
 
-    public ElvisPropertyMapping() {
+    public void onStart() {
+        elvisTypes = new HashMap<>();
+        jcrTypes = new HashMap<>();
+        if (typeMapping != null) {
+            Queue<ElvisTypeMapping> list = new LinkedList<>(typeMapping);
+            while (!list.isEmpty()) {
+                ElvisTypeMapping type = list.remove();
+                elvisTypes.put(type.getElvisName(), type);
+                jcrTypes.put(type.getJcrName(), type);
+            }
+            for (ElvisTypeMapping elvisTypeMapping : typeMapping) {
+                elvisTypeMapping.initProperties();
+            }
+        }
     }
 
-    public ElvisPropertyMapping(String jcrName, String elvisName) {
-        this.jcrName = jcrName;
-        this.elvisName = elvisName;
+    public void setTypeMapping(List<ElvisTypeMapping> typeMapping) {
+        this.typeMapping = typeMapping;
     }
 
-    public String getJcrName() {
-        return jcrName;
+    public Map<String, ElvisTypeMapping> getElvisTypes() {
+        return elvisTypes;
     }
 
-    public void setJcrName(String jcrName) {
-        this.jcrName = jcrName;
+    public Map<String, ElvisTypeMapping> getJcrTypes() {
+        return jcrTypes;
     }
-
-    public String getElvisName() {
-		return elvisName;
-	}
-
-	public void setElvisName(String elvisName) {
-		this.elvisName = elvisName;
-	}
 }

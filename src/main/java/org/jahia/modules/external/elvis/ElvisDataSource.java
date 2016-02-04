@@ -64,6 +64,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     private String userName;
     private String password;
     private String url;
+    private ElvisConfiguration configuration;
 
     @Override
     public ExternalFile getExternalFile(String path) throws PathNotFoundException {
@@ -224,6 +225,10 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public void setConfiguration(ElvisConfiguration configuration) {
+        this.configuration = configuration;
     }
 
     public void setUrl(String url) {

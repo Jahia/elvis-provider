@@ -80,6 +80,8 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
         dataSource.setUrl(mountPoint.getPropertyAsString(MountPointFactory.URL));
         dataSource.setUserName(mountPoint.getPropertyAsString(MountPointFactory.USER_NAME));
         dataSource.setPassword(mountPoint.getPropertyAsString(MountPointFactory.PASSWORD));
+        // Set provider in the datasource
+        dataSource.setConfiguration((ElvisConfiguration) applicationContext.getBean("elvisConfiguration"));
         // Start the datasource
         dataSource.start();
         // Finalize the provider setup with datasource and some JCR parameters
@@ -92,10 +94,11 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
             externalContentStoreProvider.start();
         } catch (JahiaInitializationException e) {
             logger.error(e.getMessage(), e);
-            e.printStackTrace();
         }
+
         if (logger.isDebugEnabled())
             logger.info("Elvis external provider module initialized");
+
         return externalContentStoreProvider;
     }
 
