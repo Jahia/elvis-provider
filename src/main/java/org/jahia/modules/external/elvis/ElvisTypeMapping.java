@@ -1,3 +1,26 @@
+/**
+ * ==========================================================================================
+ * =                            JAHIA'S ENTERPRISE DISTRIBUTION                             =
+ * ==========================================================================================
+ *
+ *                                  http://www.jahia.com
+ *
+ * JAHIA'S ENTERPRISE DISTRIBUTIONS LICENSING - IMPORTANT INFORMATION
+ * ==========================================================================================
+ *
+ *     Copyright (C) 2002-2016 Jahia Solutions Group. All rights reserved.
+ *
+ *     This file is part of a Jahia's Enterprise Distribution.
+ *
+ *     Jahia's Enterprise Distributions must be used in accordance with the terms
+ *     contained in the Jahia Solutions Group Terms & Conditions as well as
+ *     the Jahia Sustainable Enterprise License (JSEL).
+ *
+ *     For questions regarding licensing, support, production usage...
+ *     please contact our team at sales@jahia.com or go to http://www.jahia.com/license.
+ *
+ * ==========================================================================================
+ */
 package org.jahia.modules.external.elvis;
 
 import java.util.*;
@@ -9,18 +32,12 @@ import java.util.*;
  */
 public class ElvisTypeMapping implements Cloneable {
     private String jcrName;
-    private List<String> jcrMixins;
     private String elvisName;
-    private String queryName;
-    private ElvisTypeMapping parent;
-    private List<ElvisTypeMapping> children;
     private List<ElvisPropertyMapping> properties;
     private Map<String, ElvisPropertyMapping> propertiesMapJCR;
     private Map<String, ElvisPropertyMapping> propertiesMapElvis;
 
-    public ElvisTypeMapping() {
-
-    }
+    public ElvisTypeMapping() {}
 
     public ElvisTypeMapping(String jcrName, String elvisName) {
         this.jcrName = jcrName;
@@ -35,54 +52,12 @@ public class ElvisTypeMapping implements Cloneable {
         this.jcrName = jcrName;
     }
 
-    public List<String> getJcrMixins() {
-        return jcrMixins;
-    }
-
-    public void setJcrMixins(String jcrName) {
-        this.jcrMixins = Arrays.asList(jcrName.split(" "));
-    }
-
     public String getElvisName() {
         return elvisName;
     }
 
     public void setElvisName(String elvisName) {
         this.elvisName = elvisName;
-    }
-
-    /**
-     * Parent mapping. Used to configure tree of inheritance.
-     *
-     * @return
-     */
-    public ElvisTypeMapping getParent() {
-        return parent;
-    }
-
-    public void setParent(ElvisTypeMapping parent) {
-        this.parent = parent;
-    }
-
-    /**
-     * List of configured children.  Used to configure tree of inheritance.
-     * Return children added directly by setChildren method only.
-     * If children initialize inheritance using parent property this method will not return such children.
-     * This field used for configuration purposes only.
-     *
-     * @return List of configured children.
-     */
-    public List<ElvisTypeMapping> getChildren() {
-        return children;
-    }
-
-    public void setChildren(List<ElvisTypeMapping> children) {
-        this.children = children;
-        if (children != null) {
-            for (ElvisTypeMapping child : children) {
-                child.setParent(this);
-            }
-        }
     }
 
     public List<ElvisPropertyMapping> getProperties() {
@@ -102,12 +77,8 @@ public class ElvisTypeMapping implements Cloneable {
     }
 
     protected void initProperties() {
-        HashMap<String, ElvisPropertyMapping> mapJCR = new HashMap<String, ElvisPropertyMapping>();
-        HashMap<String, ElvisPropertyMapping> mapElvis = new HashMap<String, ElvisPropertyMapping>();
-        if (parent != null) {
-            mapJCR.putAll(parent.getPropertiesMapJCR());
-            mapElvis.putAll(parent.getPropertiesMapElvis());
-        }
+        HashMap<String, ElvisPropertyMapping> mapJCR = new HashMap<>();
+        HashMap<String, ElvisPropertyMapping> mapElvis = new HashMap<>();
         if (properties != null) {
             for (ElvisPropertyMapping property : properties) {
                 mapJCR.put(property.getJcrName(), property);
@@ -116,11 +87,6 @@ public class ElvisTypeMapping implements Cloneable {
         }
         propertiesMapElvis = mapElvis.size() == 0 ? Collections.<String, ElvisPropertyMapping>emptyMap() : Collections.unmodifiableMap(mapElvis);
         propertiesMapJCR = mapJCR.size() == 0 ? Collections.<String, ElvisPropertyMapping>emptyMap() : Collections.unmodifiableMap(mapJCR);
-        if (children != null) {
-            for (ElvisTypeMapping child : children) {
-                child.initProperties();
-            }
-        }
     }
 
 
@@ -151,19 +117,5 @@ public class ElvisTypeMapping implements Cloneable {
      */
     public ElvisPropertyMapping getPropertyByElvis(String localName) {
         return propertiesMapElvis.get(localName);
-    }
-
-    /**
-     * Name of type used in Elvis queries.
-     * If not set return ElvisName
-     *
-     * @return
-     */
-    public String getQueryName() {
-        return queryName == null ? elvisName : queryName;
-    }
-
-    public void setQueryName(String queryName) {
-        this.queryName = queryName;
     }
 }

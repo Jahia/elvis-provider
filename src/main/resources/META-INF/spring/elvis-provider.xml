@@ -1,7 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+    <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" id="elvisFile"
+          p:jcrName="jnt:file" p:elvisName="file">
+        <property name="properties">
+            <list>
+                <bean p:elvisName="name" p:jcrName="j:nodename"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+
+                <bean p:elvisName="filename" p:jcrName="jcr:title"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="description" p:jcrName="jcr:description"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+
+                <bean p:elvisName="assetCreator" p:jcrName="jcr:createdBy"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="assetCreated" p:jcrName="jcr:created"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+
+                <bean p:elvisName="assetModifier" p:jcrName="jcr:lastModifiedBy"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="assetModified" p:jcrName="jcr:lastModified"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+
+                <bean p:elvisName="mimeType" p:jcrName="jcr:mimeType"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" parent="elvisFile" id="elvisImage"
+          p:jcrName="jmix:image"
+          p:elvisName="image">
+        <property name="properties">
+            <list merge="true">
+                <bean p:elvisName="width" p:jcrName="j:width"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="height" p:jcrName="j:height"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" parent="elvisFile" id="elvisDocument"
+          p:jcrName="jmix:document"
+          p:elvisName="document">
+        <property name="properties">
+            <list merge="true">
+                <bean p:elvisName="numberOfPages" p:jcrName="j:pageCount"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="elvisConfiguration" class="org.jahia.modules.external.elvis.ElvisConfiguration" init-method="onStart"
+          scope="prototype">
+        <property name="typeMapping">
+            <list>
+                <ref bean="elvisFile"/>
+                <ref bean="elvisImage"/>
+                <ref bean="elvisDocument"/>
+            </list>
+        </property>
+    </bean>
+
     <bean class="org.jahia.modules.external.elvis.ElvisProviderFactory">
         <property name="reservedNodes">
             <list>
