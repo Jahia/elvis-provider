@@ -36,6 +36,7 @@ import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalContentStoreProvider;
 import org.jahia.modules.external.ExternalDataSource;
 import org.jahia.modules.external.ExternalQuery;
+import org.jahia.modules.external.ExternalData;
 import org.jahia.utils.WebUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -59,7 +60,6 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     private CookieStore cookieStore = new BasicCookieStore();
     private CloseableHttpClient httpClient;
-    private ExternalContentStoreProvider externalContentStoreProvider;
     private HttpClientContext context;
     private String userName;
     private String password;
@@ -83,15 +83,12 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                                 return new ExternalFile(ExternalFile.FileType.FOLDER, path, null, null);
                             }
                         }
-                    } else {
-                        throw new PathNotFoundException("The request could not be executed please check your Elvis API credential");
                     }
                 }
-                throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
-                return null;
             }
+            throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
         }
     }
 
@@ -101,15 +98,10 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         try {
             CloseableHttpResponse browseResponse = getDataFromApi("/browse?path=" + WebUtils.escapePath(path));
             if (browseResponse.getStatusLine().getStatusCode() == 200) {
-                try {
-                    JSONArray jsonArray = new JSONArray(EntityUtils.toString(browseResponse.getEntity()));
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        JSONObject element = jsonArray.getJSONObject(i);
-                        childrenList.add(new ExternalFile(ExternalFile.FileType.FOLDER, element.getString("assetPath"), null, null));
-                    }
-                } catch (JSONException e) {
-                    logger.error("Could not process JSON response probably due a connection problem with the API");
-                    return childrenList;
+                JSONArray jsonArray = new JSONArray(EntityUtils.toString(browseResponse.getEntity()));
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject element = jsonArray.getJSONObject(i);
+                    childrenList.add(new ExternalFile(ExternalFile.FileType.FOLDER, element.getString("assetPath"), null, null));
                 }
             }
 
@@ -125,63 +117,58 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                     }
                 }
             }
-
             return childrenList;
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
-            return null;
+            throw new RepositoryException(e);
         }
     }
 
     @Override
-    public Binary getFileBinary(String path) throws PathNotFoundException {
+    public Binary getFileBinary(ExternalFile file) throws PathNotFoundException {
         try {
-            String originalUrl = "";
             long fileSize = -1;
-            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
+            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + file.getPath() + "\""));
             if (searchResponse.getStatusLine().getStatusCode() == 200) {
                 JSONObject jsonObject = new JSONObject(EntityUtils.toString(searchResponse.getEntity()));
                 if (jsonObject.has("hits")) {
                     JSONArray searchJsonArray = jsonObject.getJSONArray("hits");
                     for (int i = 0 ; i < searchJsonArray.length() ; i++) {
                         JSONObject element = searchJsonArray.getJSONObject(i);
-                        originalUrl = element.getString("originalUrl");
                         JSONObject elMetadata = element.getJSONObject("metadata");
-                        if (elMetadata.has("fileSize"))
+                        if (elMetadata.has("fileSize")) {
                             fileSize = elMetadata.getJSONObject("fileSize").getLong("value");
+                        }
+                        return new ElvisBinaryImpl(element.getString("originalUrl"), fileSize, this.context, this.httpClient);
                     }
                 }
             }
-
-            return new ElvisBinaryImpl(originalUrl, fileSize, this.context, this.httpClient);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
-            return null;
         }
+        throw new PathNotFoundException(file.getPath());
     }
 
     @Override
-    public Binary getThumbnailBinary(String path) throws PathNotFoundException {
+    public Binary getThumbnailBinary(ExternalFile file) throws PathNotFoundException {
         try {
-            String thumbnailUrl = "";
-            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
+            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + file.getPath() + "\""));
             if (searchResponse.getStatusLine().getStatusCode() == 200) {
                 JSONObject jsonObject = new JSONObject(EntityUtils.toString(searchResponse.getEntity()));
                 if (jsonObject.has("hits")) {
                     JSONArray searchJsonArray = jsonObject.getJSONArray("hits");
                     for (int i = 0 ; i < searchJsonArray.length() ; i++) {
                         JSONObject element = searchJsonArray.getJSONObject(i);
-                        if (element.has("thumbnailUrl"))
-                            thumbnailUrl = element.getString("thumbnailUrl");
+                        if (element.has("thumbnailUrl")) {
+                            return new ElvisBinaryImpl(element.getString("thumbnailUrl"), -1, this.context, this.httpClient);
+                        }
                     }
                 }
             }
-
-            return new ElvisBinaryImpl(thumbnailUrl, -1, this.context, this.httpClient);
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
-            return null;
         }
+        throw new PathNotFoundException(file.getPath()+ "/thumbnail");
     }
 
     @Override
@@ -215,6 +202,12 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         } catch (IOException e) {
             logger.error("Could not logout from the ELVIS API !", e.getMessage());
         }
+        try {
+            httpClient.close();
+        } catch (IOException e) {
+            logger.error("Could not close from the ELVIS API !", e.getMessage());
+        }
+
     }
 
     @Override
@@ -234,13 +227,10 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     }
 
     public void setUrl(String url) {
-        if (url.endsWith("/"))
+        if (url.endsWith("/")) {
             url = StringUtils.substringBeforeLast(url, "/");
+        }
         this.url = url;
-    }
-
-    public void setExternalContentStoreProvider(ExternalContentStoreProvider externalContentStoreProvider) {
-        this.externalContentStoreProvider = externalContentStoreProvider;
     }
 
     private ExternalFile createExternalFile(JSONArray searchJsonArray, int i) throws JSONException, IOException, RepositoryException {
@@ -251,12 +241,20 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         long modified = elMetadata.getJSONObject("assetModified").getLong("value");
 
         ExternalFile externalFile = new ExternalFile(ExternalFile.FileType.FILE, elPath, new Date(created), new Date(modified));
-        if (elMetadata.has("description"))
-            externalFile.getProperties().put(Constants.JCR_DESCRIPTION, new String[] {elMetadata.getString("description")});
-        if (elMetadata.has("assetCreator"))
-            externalFile.getProperties().put(Constants.JCR_CREATEDBY, new String[] {elMetadata.getString("assetCreator")});
-        if (elMetadata.has("assetModifier"))
-            externalFile.getProperties().put(Constants.JCR_LASTMODIFIEDBY, new String[] {elMetadata.getString("assetModifier")});
+
+        if (elMetadata.has("description")) {
+            externalFile.getProperties().put(Constants.JCR_DESCRIPTION, new String[]{elMetadata.getString("description")});
+        }
+        if (elMetadata.has("assetCreator")) {
+            externalFile.getProperties().put(Constants.JCR_CREATEDBY, new String[]{elMetadata.getString("assetCreator")});
+        }
+        if (elMetadata.has("assetModifier")) {
+            externalFile.getProperties().put(Constants.JCR_LASTMODIFIEDBY, new String[]{elMetadata.getString("assetModifier")});
+        }
+        if (element.has("thumbnailUrl")) {
+            externalFile.setHasThumbnail(true);
+        }
+
 
         String mimeType = elMetadata.getString("mimeType");
         externalFile.setContentType(mimeType);
@@ -264,11 +262,13 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         // If file is an image
         externalFile.getProperties().put(Constants.JCR_MIMETYPE, new String[] {mimeType});
         if (mimeType.startsWith("image/")) {
-            externalFile.setMixin(Arrays.asList(Constants.JAHIAMIX_IMAGE));
-            if (elMetadata.has("width"))
-                externalFile.getProperties().put("j:width", new String[] {elMetadata.getString("width")});
-            if (elMetadata.has("height"))
-                externalFile.getProperties().put("j:height", new String[] {elMetadata.getString("height")});
+            externalFile.setMixin(Collections.singletonList(Constants.JAHIAMIX_IMAGE));
+            if (elMetadata.has("width")) {
+                externalFile.getProperties().put("j:width", new String[]{elMetadata.getString("width")});
+            }
+            if (elMetadata.has("height")) {
+                externalFile.getProperties().put("j:height", new String[]{elMetadata.getString("height")});
+            }
         }
         return externalFile;
     }
@@ -276,6 +276,6 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     private CloseableHttpResponse getDataFromApi(String endOfUri) throws IOException {
         HttpGet get = new HttpGet(this.url + "/services" + endOfUri);
         get.setHeader("Accept", "Application/Json");
-        return this.httpClient.execute(get, this.context);
+        return httpClient.execute(get, this.context);
     }
 }

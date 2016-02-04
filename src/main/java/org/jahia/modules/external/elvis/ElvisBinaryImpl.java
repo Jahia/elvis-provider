@@ -61,33 +61,35 @@ public class ElvisBinaryImpl implements Binary {
 
     @Override
     public InputStream getStream() throws RepositoryException {
-        if (currentBinaryContent != null)
+        if (currentBinaryContent != null) {
             return new ByteArrayInputStream(currentBinaryContent);
+        }
 
         try {
             if (StringUtils.isNotBlank(this.url) && this.httpClient != null && this.context != null) {
                 HttpGet get = new HttpGet(this.url);
                 get.setHeader("Accept", "*/*");
                 CloseableHttpResponse httpResponse = this.httpClient.execute(get, this.context);
-                InputStream is = httpResponse.getEntity().getContent();
-                currentBinaryContent = IOUtils.toByteArray(is);
-            } else {
-                InputStream is = getClass().getResourceAsStream("/images/thumbnail-not-available.png");
-                currentBinaryContent = IOUtils.toByteArray(is);
+
+                try (InputStream is = httpResponse.getEntity().getContent()) {
+                    currentBinaryContent = IOUtils.toByteArray(is);
+                }
+                return new ByteArrayInputStream(currentBinaryContent);
             }
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
             currentBinaryContent = new byte[0];
         }
-        return new ByteArrayInputStream(currentBinaryContent);
+        throw new RepositoryException("Cannot get binary");
     }
 
     @Override
     public int read(byte[] b, long position) throws IOException, RepositoryException {
-        if (currentBinaryContent != null)
+        if (currentBinaryContent != null) {
             return getStream().read(b, (int) position, b.length);
+        }
 
-        return -1;
+        throw new IllegalStateException();
     }
 
     @Override
