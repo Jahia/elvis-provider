@@ -39,6 +39,8 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
+ * Implementation binary properties to access Elvis document's content
+ *
  * @author Damien GAILLARD
  */
 public class ElvisBinaryImpl implements Binary {

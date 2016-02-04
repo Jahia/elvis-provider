@@ -35,6 +35,8 @@ import javax.jcr.PathNotFoundException;
 import javax.jcr.RepositoryException;
 
 /**
+ * MountPointFactory to set Elvis API properties
+ *
  * @author Damien GAILLARD
  */
 public class MountPointFactory extends AbstractMountPointFactory {
