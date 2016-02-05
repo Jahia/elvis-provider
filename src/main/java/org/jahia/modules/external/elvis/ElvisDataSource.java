@@ -33,8 +33,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.jahia.api.Constants;
-import org.jahia.modules.external.ExternalContentStoreProvider;
-import org.jahia.modules.external.ExternalData;
 import org.jahia.utils.WebUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -71,16 +69,17 @@ public class ElvisDataSource extends FilesDataSource {
         } else {
             try {
                 CloseableHttpResponse searchResponse = getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
-                if (searchResponse.getStatusLine().getStatusCode() == 200) {
-                    JSONObject jsonObject = new JSONObject(EntityUtils.toString(searchResponse.getEntity()));
-                    if (!jsonObject.has("errorcode")) {
-                        if (jsonObject.has("hits")) {
-                            JSONArray searchJsonArray = jsonObject.getJSONArray("hits");
-                            if (searchJsonArray.length() > 0) {
-                                return createExternalFile(searchJsonArray, 0);
-                            } else {
-                                return new ExternalFile(ExternalFile.FileType.FOLDER, path, null, null);
-                            }
+                JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                if (searchJsonArray.length() > 0) {
+                    return createExternalFile(searchJsonArray, 0);
+                } else {
+                    String parentPath = StringUtils.substringBeforeLast(path, "/");
+                    CloseableHttpResponse browseResponse = getDataFromApi("/browse?path=" + WebUtils.escapePath(parentPath));
+                    JSONArray jsonArray = getBrowseResponse(browseResponse);
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject element = jsonArray.getJSONObject(i);
+                        if (element.getString("assetPath").equals(path)) {
+                            return new ExternalFile(ExternalFile.FileType.FOLDER, path, null, null);
                         }
                     }
                 }
@@ -96,25 +95,16 @@ public class ElvisDataSource extends FilesDataSource {
         List<ExternalFile> childrenList = new ArrayList<>();
         try {
             CloseableHttpResponse browseResponse = getDataFromApi("/browse?path=" + WebUtils.escapePath(path));
-            if (browseResponse.getStatusLine().getStatusCode() == 200) {
-                JSONArray jsonArray = new JSONArray(EntityUtils.toString(browseResponse.getEntity()));
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject element = jsonArray.getJSONObject(i);
-                    childrenList.add(new ExternalFile(ExternalFile.FileType.FOLDER, element.getString("assetPath"), null, null));
-                }
+            JSONArray jsonArray = getBrowseResponse(browseResponse);
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject element = jsonArray.getJSONObject(i);
+                childrenList.add(new ExternalFile(ExternalFile.FileType.FOLDER, element.getString("assetPath"), null, null));
             }
 
             CloseableHttpResponse searchResponse = getDataFromApi("/search?q=folderPath:" + WebUtils.escapePath(path));
-            if (searchResponse.getStatusLine().getStatusCode() == 200) {
-                JSONObject jsonObject = new JSONObject(EntityUtils.toString(searchResponse.getEntity()));
-                if (!jsonObject.has("errorcode")) {
-                    if (jsonObject.has("hits")) {
-                        JSONArray searchJsonArray = jsonObject.getJSONArray("hits");
-                        for (int i = 0; i < searchJsonArray.length(); i++) {
-                            childrenList.add(createExternalFile(searchJsonArray, i));
-                        }
-                    }
-                }
+            JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+            for (int i = 0; i < searchJsonArray.length(); i++) {
+                childrenList.add(createExternalFile(searchJsonArray, i));
             }
             return childrenList;
         } catch (Exception e) {
@@ -126,21 +116,13 @@ public class ElvisDataSource extends FilesDataSource {
     @Override
     public Binary getFileBinary(ExternalFile file) throws PathNotFoundException {
         try {
-            long fileSize = -1;
             CloseableHttpResponse searchResponse = getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + file.getPath() + "\""));
-            if (searchResponse.getStatusLine().getStatusCode() == 200) {
-                JSONObject jsonObject = new JSONObject(EntityUtils.toString(searchResponse.getEntity()));
-                if (jsonObject.has("hits")) {
-                    JSONArray searchJsonArray = jsonObject.getJSONArray("hits");
-                    for (int i = 0 ; i < searchJsonArray.length() ; i++) {
-                        JSONObject element = searchJsonArray.getJSONObject(i);
-                        JSONObject elMetadata = element.getJSONObject("metadata");
-                        if (elMetadata.has("fileSize")) {
-                            fileSize = elMetadata.getJSONObject("fileSize").getLong("value");
-                        }
-                        return new ElvisBinaryImpl(element.getString("originalUrl"), fileSize, this.context, this.httpClient);
-                    }
-                }
+            JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+            if (searchJsonArray.length() > 0) {
+                JSONObject element = searchJsonArray.getJSONObject(0);
+                JSONObject elMetadata = element.getJSONObject("metadata");
+                long fileSize = elMetadata.has("fileSize")?elMetadata.getJSONObject("fileSize").getLong("value"):-1;
+                return new ElvisBinaryImpl(element.getString("originalUrl"), fileSize, this.context, this.httpClient);
             }
         } catch (Exception e) {
             logger.error(e.getMessage(), e);
@@ -152,16 +134,11 @@ public class ElvisDataSource extends FilesDataSource {
     public Binary getThumbnailBinary(ExternalFile file) throws PathNotFoundException {
         try {
             CloseableHttpResponse searchResponse = getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + file.getPath() + "\""));
-            if (searchResponse.getStatusLine().getStatusCode() == 200) {
-                JSONObject jsonObject = new JSONObject(EntityUtils.toString(searchResponse.getEntity()));
-                if (jsonObject.has("hits")) {
-                    JSONArray searchJsonArray = jsonObject.getJSONArray("hits");
-                    for (int i = 0 ; i < searchJsonArray.length() ; i++) {
-                        JSONObject element = searchJsonArray.getJSONObject(i);
-                        if (element.has("thumbnailUrl")) {
-                            return new ElvisBinaryImpl(element.getString("thumbnailUrl"), -1, this.context, this.httpClient);
-                        }
-                    }
+            JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+            if (searchJsonArray.length() > 0) {
+                JSONObject element = searchJsonArray.getJSONObject(0);
+                if (element.has("thumbnailUrl")) {
+                    return new ElvisBinaryImpl(element.getString("thumbnailUrl"), -1, this.context, this.httpClient);
                 }
             }
         } catch (Exception e) {
@@ -174,7 +151,7 @@ public class ElvisDataSource extends FilesDataSource {
     public boolean isAvailable() throws RepositoryException {
         if (this.context.getCookieStore().getCookies().size() == 0) {
             try {
-                //Execute the post to Dalim API
+                // Execute get request to connect to the Elvis API
                 getDataFromApi("/login?username=" + this.userName + "&password=" + this.password);
                 return this.context.getCookieStore().getCookies().size() > 0;
             } catch(IOException e) {
@@ -228,49 +205,69 @@ public class ElvisDataSource extends FilesDataSource {
         this.url = url;
     }
 
-    private ExternalFile createExternalFile(JSONArray searchJsonArray, int i) throws JSONException, IOException, RepositoryException {
-        JSONObject element = searchJsonArray.getJSONObject(i);
-        JSONObject elMetadata = element.getJSONObject("metadata");
-        String elPath = elMetadata.getString("assetPath");
-        long created = elMetadata.getJSONObject("assetCreated").getLong("value");
-        long modified = elMetadata.getJSONObject("assetModified").getLong("value");
-
-        ExternalFile externalFile = new ExternalFile(ExternalFile.FileType.FILE, elPath, new Date(created), new Date(modified));
-
-        if (elMetadata.has("description")) {
-            externalFile.getProperties().put(Constants.JCR_DESCRIPTION, new String[]{elMetadata.getString("description")});
-        }
-        if (elMetadata.has("assetCreator")) {
-            externalFile.getProperties().put(Constants.JCR_CREATEDBY, new String[]{elMetadata.getString("assetCreator")});
-        }
-        if (elMetadata.has("assetModifier")) {
-            externalFile.getProperties().put(Constants.JCR_LASTMODIFIEDBY, new String[]{elMetadata.getString("assetModifier")});
-        }
-        if (element.has("thumbnailUrl")) {
-            externalFile.setHasThumbnail(true);
-        }
-
-
-        String mimeType = elMetadata.getString("mimeType");
-        externalFile.setContentType(mimeType);
-
-        // If file is an image
-        externalFile.getProperties().put(Constants.JCR_MIMETYPE, new String[] {mimeType});
-        if (mimeType.startsWith("image/")) {
-            externalFile.setMixin(Collections.singletonList(Constants.JAHIAMIX_IMAGE));
-            if (elMetadata.has("width")) {
-                externalFile.getProperties().put("j:width", new String[]{elMetadata.getString("width")});
-            }
-            if (elMetadata.has("height")) {
-                externalFile.getProperties().put("j:height", new String[]{elMetadata.getString("height")});
-            }
-        }
-        return externalFile;
-    }
-
     private CloseableHttpResponse getDataFromApi(String endOfUri) throws IOException {
         HttpGet get = new HttpGet(this.url + "/services" + endOfUri);
         get.setHeader("Accept", "Application/Json");
         return httpClient.execute(get, this.context);
+    }
+
+    private JSONArray getBrowseResponse(CloseableHttpResponse browseResponse) throws Exception {
+        if (browseResponse.getStatusLine().getStatusCode() == 200) {
+            return new JSONArray(EntityUtils.toString(browseResponse.getEntity()));
+        }
+        throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
+    }
+
+    private JSONArray getHitsInSearchResponse(CloseableHttpResponse searchResponse) throws Exception {
+        if (searchResponse.getStatusLine().getStatusCode() == 200) {
+            JSONObject jsonObject = new JSONObject(EntityUtils.toString(searchResponse.getEntity()));
+            if (!jsonObject.has("errorcode")) {
+                if (jsonObject.has("hits")) {
+                    return jsonObject.getJSONArray("hits");
+                }
+            }
+        }
+        throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
+    }
+
+    private ExternalFile createExternalFile(JSONArray searchJsonArray, int index) throws JSONException, IOException, RepositoryException {
+        JSONObject element = searchJsonArray.getJSONObject(index);
+        JSONObject elMetadata = element.getJSONObject("metadata");
+
+        // Get Basic information to create ExternalFile object
+        String elPath = elMetadata.getString("assetPath");
+        Date created = elMetadata.has("assetCreated")?new Date(elMetadata.getJSONObject("assetCreated").getLong("value")):null;
+        Date modified = elMetadata.has("assetModified")?new Date(elMetadata.getJSONObject("assetModified").getLong("value")):null;
+        ExternalFile externalFile = new ExternalFile(ExternalFile.FileType.FILE, elPath, created, modified);
+
+        // Set boolean to know if we need to get the thumbnail or not
+        if (element.has("thumbnailUrl")) {
+            externalFile.setHasThumbnail(true);
+        }
+
+        // If possible use assetDomain value to map data but verify if we have mapping for current value if not use default file
+        String fileType = (elMetadata.has("assetDomain"))?elMetadata.getString("assetDomain"):"file";
+        ElvisTypeMapping elvisTypeMapping = configuration.getTypeByElvisName(fileType);
+
+        // If different than default type jnt:file getJcrName which should be the mixin e.g jmix:image
+        if (!fileType.equals("file")) {
+            externalFile.setMixin(Collections.singletonList(elvisTypeMapping.getJcrName()));
+        }
+
+        for (ElvisPropertyMapping propertyMapping : elvisTypeMapping.getProperties()) {
+            String elvisName = propertyMapping.getElvisName();
+            if (elMetadata.has(elvisName)) {
+                String jcrName = propertyMapping.getJcrName();
+                if (!jcrName.equals(Constants.JCR_CREATED) && !jcrName.equals(Constants.JCR_LASTMODIFIED) && !jcrName.equals(Constants.JCR_MIMETYPE)) {
+                    externalFile.getProperties().put(jcrName, new String[]{elMetadata.getString(elvisName)});
+                } else if (jcrName.equals(Constants.JCR_MIMETYPE)) {
+                    String mimeType = elMetadata.getString(elvisName);
+                    externalFile.getProperties().put(Constants.JCR_MIMETYPE, new String[] {mimeType});
+                    externalFile.setContentType(mimeType);
+                }
+            }
+        }
+
+        return externalFile;
     }
 }

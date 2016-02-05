@@ -9,11 +9,6 @@
           p:jcrName="jnt:file" p:elvisName="file">
         <property name="properties">
             <list>
-                <bean p:elvisName="name" p:jcrName="j:nodename"
-                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
-
-                <bean p:elvisName="filename" p:jcrName="jcr:title"
-                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
                 <bean p:elvisName="description" p:jcrName="jcr:description"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
 
@@ -57,6 +52,10 @@
         </property>
     </bean>
 
+    <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" parent="elvisDocument" id="elvisPDF"
+          p:jcrName="jmix:document"
+          p:elvisName="pdf"/>
+
     <bean id="elvisConfiguration" class="org.jahia.modules.external.elvis.ElvisConfiguration" init-method="onStart"
           scope="prototype">
         <property name="typeMapping">
@@ -64,6 +63,7 @@
                 <ref bean="elvisFile"/>
                 <ref bean="elvisImage"/>
                 <ref bean="elvisDocument"/>
+                <ref bean="elvisPDF"/>
             </list>
         </property>
     </bean>

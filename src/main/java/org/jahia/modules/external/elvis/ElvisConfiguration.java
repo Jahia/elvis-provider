@@ -29,6 +29,8 @@ import java.util.*;
  * @author Damien GAILLARD
  */
 public class ElvisConfiguration {
+    private static String DEFAULT_ELVIS_TYPE_NAME = "file";
+
     private List<ElvisTypeMapping> typeMapping;
     private Map<String, ElvisTypeMapping> elvisTypes;
     private Map<String, ElvisTypeMapping> jcrTypes;
@@ -59,5 +61,18 @@ public class ElvisConfiguration {
 
     public Map<String, ElvisTypeMapping> getJcrTypes() {
         return jcrTypes;
+    }
+
+    public ElvisTypeMapping getTypeByJCRName(String name) {
+        return jcrTypes.get(name);
+    }
+
+    /**
+     * This method return the mapping for the current type if not in map it will return default mapping
+     * @param name  : name of the desired type
+     * @return
+     */
+    public ElvisTypeMapping getTypeByElvisName(String name) {
+        return elvisTypes.containsKey(name)?elvisTypes.get(name):elvisTypes.get(DEFAULT_ELVIS_TYPE_NAME);
     }
 }
