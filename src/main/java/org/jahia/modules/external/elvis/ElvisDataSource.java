@@ -247,23 +247,34 @@ public class ElvisDataSource extends FilesDataSource {
 
         // If possible use assetDomain value to map data but verify if we have mapping for current value if not use default file
         String fileType = (elMetadata.has("assetDomain"))?elMetadata.getString("assetDomain"):"file";
-        ElvisTypeMapping elvisTypeMapping = configuration.getTypeByElvisName(fileType);
+        List<ElvisTypeMapping> elvisTypesMapping = configuration.getTypeByElvisName(fileType);
 
         // If different than default type jnt:file getJcrName which should be the mixin e.g jmix:image
         if (!fileType.equals("file")) {
-            externalFile.setMixin(Collections.singletonList(elvisTypeMapping.getJcrName()));
+            List<String> mixins = new ArrayList<>();
+            for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
+                if (!elvisTypeMapping.getJcrName().equals("jnt:file")) {
+                    mixins.add(elvisTypeMapping.getJcrName());
+                }
+            }
+            if (!mixins.isEmpty()) {
+                externalFile.setMixin(mixins);
+            }
         }
 
-        for (ElvisPropertyMapping propertyMapping : elvisTypeMapping.getProperties()) {
-            String elvisName = propertyMapping.getElvisName();
-            if (elMetadata.has(elvisName)) {
+
+        for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
+            for (ElvisPropertyMapping propertyMapping : elvisTypeMapping.getProperties()) {
+                String elvisName = propertyMapping.getElvisName();
                 String jcrName = propertyMapping.getJcrName();
-                if (!jcrName.equals(Constants.JCR_CREATED) && !jcrName.equals(Constants.JCR_LASTMODIFIED) && !jcrName.equals(Constants.JCR_MIMETYPE)) {
-                    externalFile.getProperties().put(jcrName, new String[]{elMetadata.getString(elvisName)});
-                } else if (jcrName.equals(Constants.JCR_MIMETYPE)) {
-                    String mimeType = elMetadata.getString(elvisName);
-                    externalFile.getProperties().put(Constants.JCR_MIMETYPE, new String[] {mimeType});
-                    externalFile.setContentType(mimeType);
+                if (elMetadata.has(elvisName) && !externalFile.getProperties().containsKey(jcrName)) {
+                    if (!jcrName.equals(Constants.JCR_CREATED) && !jcrName.equals(Constants.JCR_LASTMODIFIED) && !jcrName.equals(Constants.JCR_MIMETYPE)) {
+                        externalFile.getProperties().put(jcrName, new String[]{elMetadata.getString(elvisName)});
+                    } else if (jcrName.equals(Constants.JCR_MIMETYPE)) {
+                        String mimeType = elMetadata.getString(elvisName);
+                        externalFile.getProperties().put(Constants.JCR_MIMETYPE, new String[] {mimeType});
+                        externalFile.setContentType(mimeType);
+                    }
                 }
             }
         }
