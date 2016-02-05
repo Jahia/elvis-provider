@@ -64,7 +64,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     private String userName;
     private String password;
     private String url;
-    private ElvisConfiguration configuration;
+    protected ElvisConfiguration configuration;
 
     @Override
     public ExternalFile getExternalFile(String path) throws PathNotFoundException {
@@ -193,9 +193,30 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     @Override
     public List<String> search(ExternalQuery query) throws RepositoryException {
         QueryResolver queryResolver = new QueryResolver(this, query);
-        queryResolver.resolve();
+        String sql = queryResolver.resolve();
 
-        return Collections.emptyList();
+        // Not mapped or unsupported queries treated as empty.
+        if (StringUtils.isBlank(sql)) {
+            return Collections.emptyList();
+        }
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("Elvis query " + sql);
+        }
+
+        List<String> pathList = new ArrayList<>();
+        try {
+            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=" + sql);
+            JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+            for (int i = 0; i < searchJsonArray.length(); i++) {
+                JSONObject hit = searchJsonArray.getJSONObject(i);
+                pathList.add(hit.getJSONObject("metadata").getString("assetPath"));
+            }
+            return pathList;
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+            return Collections.emptyList();
+        }
     }
 
     public void setUserName(String userName) {

@@ -23,8 +23,10 @@
  */
 package org.jahia.modules.external.elvis;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.jackrabbit.commons.query.qom.Operator;
 import org.jahia.modules.external.ExternalQuery;
+import org.jahia.utils.WebUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +35,7 @@ import javax.jcr.RepositoryException;
 import javax.jcr.UnsupportedRepositoryOperationException;
 import javax.jcr.Value;
 import javax.jcr.query.qom.*;
+import java.util.List;
 
 /**
  * @author Damien GAILLARD
@@ -45,10 +48,13 @@ public class QueryResolver {
 
     ElvisDataSource dataSource;
     ExternalQuery query;
+    ElvisConfiguration configuration;
+    List<ElvisTypeMapping> elvisTypesMapping;
 
     public QueryResolver(ElvisDataSource dataSource, ExternalQuery query) {
         this.dataSource = dataSource;
         this.query = query;
+        configuration = dataSource.configuration;
     }
 
     public String resolve() throws RepositoryException {
@@ -60,12 +66,36 @@ public class QueryResolver {
             return null;
         }
 
+        Selector selector = (Selector) source;
+        String nodeTypeName = selector.getNodeTypeName();
+
+        // Supports queries on hierarchyNode as file queries
+        if (nodeTypeName.equals("nt:hierarchyNode")) {
+            nodeTypeName = "jnt:file";
+        }
+
+        elvisTypesMapping = configuration.getTypeByJCRName(nodeTypeName);
+        if (elvisTypesMapping == null || elvisTypesMapping.isEmpty()) {
+            logger.debug("Unmapped types not supported in Elvis queries");
+            return null;
+        }
+
+        if (!nodeTypeName.equals("jnt:file")) {
+            buff.append("(");
+            for (int i = 0 ; i < elvisTypesMapping.size() ; i++) {
+                if (i > 0) {
+                    buff.append("OR");
+                }
+                buff.append("assetDomain:\"").append(elvisTypesMapping.get(i).getElvisName()).append("\"");
+            }
+            buff.append(")");
+        }
+
         if (query.getConstraint() != null) {
             StringBuffer buffer = addConstraint(query.getConstraint());
             if (buffer == FALSE) {
                 return null;
             } else if (buffer != TRUE) {
-//                buff.append(" WHERE ");
                 buff.append(buffer);
             }
         }
@@ -117,7 +147,7 @@ public class QueryResolver {
             }
             buff.append("(");
             buff.append(constraint1);
-            buff.append("||");
+            buff.append("OR");
             buff.append(constraint2);
             buff.append(")");
         } else if (constraint instanceof And) {
@@ -153,27 +183,37 @@ public class QueryResolver {
                 buff.setLength(pos);
 
                 Operator operator = Operator.getOperatorByName(c.getOperator());
-                buff.append(operator.formatSql(op1, op2));
+                buff.append(op1).append(":");
+                String operatorName = operator.toString();
+                if (operatorName.equals("jcr.operator.equal.to")) {
+                    buff.append(op2);
+                } else if (operatorName.equals("jcr.operator.not.equal.to")) {
+                    return FALSE;
+                } else if (operatorName.equals("jcr.operator.greater.than")) {
+                    return FALSE;
+                } else if (operatorName.equals("jcr.operator.greater.than.or.equal.to")) {
+                    buff.append(op2);
+                } else if (operatorName.equals("jcr.operator.less.than")) {
+                    return FALSE;
+                } else if (operatorName.equals("jcr.operator.less.than.or.equal.to")) {
+                    buff.append(op2);
+                } else if (operatorName.equals("jcr.operator.like")) {
+                    if (StringUtils.startsWith(op2, "%25")) {
+                        op2 = "*" + StringUtils.substringAfter(op2, "%25");
+                    }
+                    if (StringUtils.endsWith(op2, "%25")) {
+                        op2 = StringUtils.substringBeforeLast(op2, "%25") + "*";
+                    }
+                    buff.append(op2);
+                }
             } catch (NotMappedElvisProperty e) {
                 return FALSE;
             }
             buff.append(")");
         } else if (constraint instanceof PropertyExistence) {
-//            PropertyExistence c = (PropertyExistence) constraint;
-//            CmisPropertyMapping propertyMapping = cmisType.getPropertyByJCR(c.getPropertyName());
-//            if (propertyMapping == null)
-                return FALSE;
-//            else
-//                buff.append(" (").append(propertyMapping.getQueryName()).append(" IS NOT NULL) ");
+            return FALSE;
         } else if (constraint instanceof SameNode) {
-//            try {
-//                SameNode c = (SameNode) constraint;
-//                String path = c.getPath();
-//                CmisObject object = dataSource.getCmisSession().getObjectByPath(path);
-//                buff.append(" (cmis:objectId='").append(object.getId()).append("') ");
-//            } catch (CmisObjectNotFoundException e) {
-                return FALSE;
-//            }
+            return FALSE;
         } else if (constraint instanceof Not) {
             Not c = (Not) constraint;
             StringBuffer constraint1 = addConstraint(c.getConstraint());
@@ -183,23 +223,20 @@ public class QueryResolver {
             if (constraint1 == TRUE) {
                 return FALSE;
             }
-            buff.append(" NOT(");
+            buff.append("NOT(");
             buff.append(constraint1);
             buff.append(")");
         } else if (constraint instanceof ChildNode) {
             ChildNode c = (ChildNode) constraint;
             String parentPath = c.getParentPath();
-            buff.append("folderPath:'").append(parentPath).append("'");
+            buff.append("folderPath:").append(parentPath).append("");
         } else if (constraint instanceof DescendantNode) {
-//            ChildNode c = (ChildNode) constraint;
-//            String parentPath = c.getParentPath();
-//            buff.append("folderPath:'").append(parentPath).append("') ");
             return FALSE;
         } else if (constraint instanceof FullTextSearch) {
             FullTextSearch c = (FullTextSearch) constraint;
-            buff.append("textContent:'");
+            buff.append("(textContent:");
             addOperand(buff, c.getFullTextSearchExpression());
-            buff.append("'");
+            buff.append(")");
         }
         return buff;
     }
@@ -217,14 +254,16 @@ public class QueryResolver {
             buff.append("filename");
         } else if (operand instanceof PropertyValue) {
             PropertyValue o = (PropertyValue) operand;
-            throw new NotMappedElvisProperty(o.getPropertyName());
-//            CmisPropertyMapping propertyByJCR = cmisType.getPropertyByJCR(o.getPropertyName());
-//            if (propertyByJCR == null)
-//                throw new NotMappedCmisProperty(o.getPropertyName());
-//            buff.append(propertyByJCR.getQueryName());
+            ElvisPropertyMapping propertyByJCR = null;
+            for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
+                propertyByJCR = elvisTypeMapping.getPropertyByJCR(o.getPropertyName());
+            }
+            if (propertyByJCR == null) {
+                throw new NotMappedElvisProperty(o.getPropertyName());
+            }
+            buff.append(propertyByJCR.getElvisName());
         } else if (operand instanceof FullTextSearchScore) {
             throw new NotMappedElvisProperty();
-//            buff.append(" myscore ");
         }
     }
 
@@ -237,21 +276,21 @@ public class QueryResolver {
                 case PropertyType.DECIMAL:
                 case PropertyType.LONG:
                 case PropertyType.BOOLEAN:
-                    buff.append(val.getString());
+                    buff.append(val.getBoolean());
                     break;
                 case PropertyType.STRING:
-                    buff.append("'").append(escapeString(val.getString())).append("'");
+                    buff.append(WebUtils.escapePath(val.getString()));
                     break;
                 case PropertyType.DATE:
                     buff.append(" TIMESTAMP '").append(val.getString()).append("'");
                     break;
                 case PropertyType.NAME:
                 case PropertyType.PATH:
+                    buff.append("\"").append(WebUtils.escapePath(val.getString())).append("\"");
                 case PropertyType.REFERENCE:
                 case PropertyType.WEAKREFERENCE:
                 case PropertyType.URI:
-                    // TODO implement valid support for this operand types
-                    buff.append("'").append(val.getString()).append("'");
+                    buff.append(val.getString());
                     break;
                 default:
                     throw new UnsupportedRepositoryOperationException("Unsupported operand value type " + val.getType());
