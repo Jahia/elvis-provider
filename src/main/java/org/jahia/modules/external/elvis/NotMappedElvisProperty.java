@@ -26,6 +26,8 @@ package org.jahia.modules.external.elvis;
 import javax.jcr.RepositoryException;
 
 /**
+ *
+ *
  * @author Damien GAILLARD
  */
 public class NotMappedElvisProperty extends RepositoryException {

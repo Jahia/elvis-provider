@@ -33,10 +33,8 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.jahia.api.Constants;
-import org.jahia.modules.external.ExternalContentStoreProvider;
 import org.jahia.modules.external.ExternalDataSource;
 import org.jahia.modules.external.ExternalQuery;
-import org.jahia.modules.external.ExternalData;
 import org.jahia.utils.WebUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -179,15 +177,10 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         //Logout
         try {
             getDataFromApi("/logout");
+            httpClient.close();
         } catch (IOException e) {
             logger.error("Could not logout from the ELVIS API !", e.getMessage());
         }
-        try {
-            httpClient.close();
-        } catch (IOException e) {
-            logger.error("Could not close from the ELVIS API !", e.getMessage());
-        }
-
     }
 
     @Override
@@ -294,7 +287,6 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 externalFile.setMixin(mixins);
             }
         }
-
 
         for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
             for (ElvisPropertyMapping propertyMapping : elvisTypeMapping.getProperties()) {
