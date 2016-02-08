@@ -33,8 +33,9 @@
     <description>This is the custom module (Elvis Provider) for running on a Digital Experience Manager server.</description>
 
     <scm>
-        <connection>scm:dummy:uri</connection>
-        <developerConnection>scm:dummy:uri</developerConnection>
+        <connection>scm:git:git@github.com:Jahia/elvis-provider.git</connection>
+        <developerConnection>scm:git:git@github.com:Jahia/elvis-provider.git</developerConnection>
+        <url>scm:git:git@github.com:Jahia/elvis-provider.git</url>
     </scm>
 
     <repositories>
