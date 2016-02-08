@@ -15,10 +15,7 @@
         please contact our team at sales@jahia.com or go to http://www.jahia.com/license.
     ==========================================================================================
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>jahia-modules</artifactId>
@@ -28,7 +25,7 @@
     <groupId>org.jahia.modules</groupId>
     <artifactId>elvis-provider</artifactId>
     <name>Elvis Provider</name>
-    <version>1.0-SNAPSHOT</version>    
+    <version>1.0</version>    
     <packaging>bundle</packaging>
     <description>This is the custom module (Elvis Provider) for running on a Digital Experience Manager server.</description>
 
@@ -36,7 +33,8 @@
         <connection>scm:git:git@github.com:Jahia/elvis-provider.git</connection>
         <developerConnection>scm:git:git@github.com:Jahia/elvis-provider.git</developerConnection>
         <url>scm:git:git@github.com:Jahia/elvis-provider.git</url>
-    </scm>
+      <tag>1_0</tag>
+  </scm>
 
     <repositories>
         <repository>
