@@ -103,7 +103,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 childrenList.add(new ExternalFile(ExternalFile.FileType.FOLDER, element.getString("assetPath"), null, null));
             }
 
-            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=folderPath:" + WebUtils.escapePath(path));
+            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=folderPath:" + WebUtils.escapePath("\"" + path + "\"") + "&num=-1");
             JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
             for (int i = 0; i < searchJsonArray.length(); i++) {
                 childrenList.add(createExternalFile(searchJsonArray, i));
@@ -293,7 +293,8 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 String elvisName = propertyMapping.getElvisName();
                 String jcrName = propertyMapping.getJcrName();
                 if (elMetadata.has(elvisName) && !externalFile.getProperties().containsKey(jcrName)) {
-                    if (!jcrName.equals(Constants.JCR_CREATED) && !jcrName.equals(Constants.JCR_LASTMODIFIED) && !jcrName.equals(Constants.JCR_MIMETYPE)) {
+                    // Property [jcr:created] and [jcr:modified] are set at the ExternalFile instantiation, the [jcr:mymeType] is need to be set as content type also and jcr:content is not exactly a property but is used as a property for the search
+                    if (!jcrName.equals(Constants.JCR_CREATED) && !jcrName.equals(Constants.JCR_LASTMODIFIED) && !jcrName.equals(Constants.JCR_MIMETYPE) && !jcrName.equals(Constants.JCR_CONTENT)) {
                         externalFile.getProperties().put(jcrName, new String[]{elMetadata.getString(elvisName)});
                     } else if (jcrName.equals(Constants.JCR_MIMETYPE)) {
                         String mimeType = elMetadata.getString(elvisName);

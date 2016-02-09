@@ -23,7 +23,6 @@
  */
 package org.jahia.modules.external.elvis;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.jackrabbit.commons.query.qom.Operator;
 import org.jahia.modules.external.ExternalQuery;
 import org.jahia.utils.WebUtils;
@@ -127,6 +126,10 @@ public class QueryResolver {
                 }
             }
         }
+
+        // Set limit
+        buff.append("&num=").append(query.getLimit());
+
         return buff.toString();
     }
 
@@ -178,33 +181,54 @@ public class QueryResolver {
                 buff.setLength(pos);
 
                 pos = buff.length();
-                addOperand(buff, c.getOperand2());
+                addOperandValue(buff, c.getOperand2());
                 String op2 = buff.substring(pos);
                 buff.setLength(pos);
 
                 Operator operator = Operator.getOperatorByName(c.getOperator());
                 buff.append(op1).append(":");
                 String operatorName = operator.toString();
-                if (operatorName.equals("jcr.operator.equal.to")) {
-                    buff.append(op2);
-                } else if (operatorName.equals("jcr.operator.not.equal.to")) {
-                    return FALSE;
-                } else if (operatorName.equals("jcr.operator.greater.than")) {
-                    return FALSE;
-                } else if (operatorName.equals("jcr.operator.greater.than.or.equal.to")) {
-                    buff.append(op2);
-                } else if (operatorName.equals("jcr.operator.less.than")) {
-                    return FALSE;
-                } else if (operatorName.equals("jcr.operator.less.than.or.equal.to")) {
-                    buff.append(op2);
-                } else if (operatorName.equals("jcr.operator.like")) {
-                    if (StringUtils.startsWith(op2, "%25")) {
-                        op2 = "*" + StringUtils.substringAfter(op2, "%25");
-                    }
-                    if (StringUtils.endsWith(op2, "%25")) {
-                        op2 = StringUtils.substringBeforeLast(op2, "%25") + "*";
-                    }
-                    buff.append(op2);
+                switch (operatorName) {
+                    case "jcr.operator.equal.to":
+                        buff.append(op2);
+                        break;
+                    case "jcr.operator.not.equal.to":
+                        return FALSE;
+                    case "jcr.operator.greater.than":
+                        if (op1.equals("assetCreated") || op1.equals("assetModified")) {
+                            buff.append(WebUtils.escapePath("{")).append(op2).append(WebUtils.escapePath(" TO *}"));
+                            break;
+                        } else {
+                            return FALSE;
+                        }
+                    case "jcr.operator.greater.than.or.equal.to":
+                        if (op1.equals("assetCreated") || op1.equals("assetModified")) {
+                            buff.append(WebUtils.escapePath("[")).append(op2).append(WebUtils.escapePath(" TO *]"));
+                        } else {
+                            buff.append(op2);
+                        }
+                        break;
+                    case "jcr.operator.less.than":
+                        if (op1.equals("assetCreated") || op1.equals("assetModified")) {
+                            buff.append(WebUtils.escapePath("{* TO ")).append(op2).append(WebUtils.escapePath("}"));
+                            break;
+                        } else {
+                            return FALSE;
+                        }
+                    case "jcr.operator.less.than.or.equal.to":
+                        if (op1.equals("assetCreated") || op1.equals("assetModified")) {
+                            buff.append(WebUtils.escapePath("[ * TO ")).append(op2).append(WebUtils.escapePath("]"));
+                        } else {
+                            buff.append(op2);
+                        }
+                        break;
+                    case "jcr.operator.like":
+                        // in order to not replace wildcard % by * we need to also not replace % that might have been entered in the search
+                        op2 = op2.replace("\\%25", "_ESCAPED_QR_205_");
+                        op2 = op2.replace("%25", "*");
+                        op2 = op2.replace("_ESCAPED_QR_205_", "\\%25");
+                        buff.append(op2);
+                        break;
                 }
             } catch (NotMappedElvisProperty e) {
                 return FALSE;
@@ -234,8 +258,14 @@ public class QueryResolver {
             return FALSE;
         } else if (constraint instanceof FullTextSearch) {
             FullTextSearch c = (FullTextSearch) constraint;
-            buff.append("(textContent:");
-            addOperand(buff, c.getFullTextSearchExpression());
+            buff.append("(");
+            try {
+                addMappedProperty(buff, c.getPropertyName());
+                buff.append(":");
+                addOperandValue(buff, c.getFullTextSearchExpression());
+            } catch (NotMappedElvisProperty e) {
+                return FALSE;
+            }
             buff.append(")");
         }
         return buff;
@@ -254,22 +284,17 @@ public class QueryResolver {
             buff.append("filename");
         } else if (operand instanceof PropertyValue) {
             PropertyValue o = (PropertyValue) operand;
-            ElvisPropertyMapping propertyByJCR = null;
-            for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
-                propertyByJCR = elvisTypeMapping.getPropertyByJCR(o.getPropertyName());
-            }
-            if (propertyByJCR == null) {
-                throw new NotMappedElvisProperty(o.getPropertyName());
-            }
-            buff.append(propertyByJCR.getElvisName());
+            String propertyName = o.getPropertyName();
+            addMappedProperty(buff, propertyName);
         } else if (operand instanceof FullTextSearchScore) {
             throw new NotMappedElvisProperty();
         }
     }
 
-    private void addOperand(StringBuffer buff, StaticOperand operand) throws RepositoryException {
+    private void addOperandValue(StringBuffer buff, StaticOperand operand) throws RepositoryException {
         if (operand instanceof Literal) {
             Value val = ((Literal) operand).getLiteralValue();
+            String stringVal = val.getString();
             switch (val.getType()) {
                 case PropertyType.BINARY:
                 case PropertyType.DOUBLE:
@@ -279,18 +304,18 @@ public class QueryResolver {
                     buff.append(val.getBoolean());
                     break;
                 case PropertyType.STRING:
-                    buff.append(WebUtils.escapePath(val.getString()));
+                    buff.append(WebUtils.escapePath(stringVal));
                     break;
                 case PropertyType.DATE:
-                    buff.append(" TIMESTAMP '").append(val.getString()).append("'");
+                    buff.append(WebUtils.escapePath(stringVal));
                     break;
                 case PropertyType.NAME:
                 case PropertyType.PATH:
-                    buff.append("\"").append(WebUtils.escapePath(val.getString())).append("\"");
+                    buff.append(WebUtils.escapePath("\"" + stringVal + "\""));
                 case PropertyType.REFERENCE:
                 case PropertyType.WEAKREFERENCE:
                 case PropertyType.URI:
-                    buff.append(val.getString());
+                    buff.append(stringVal);
                     break;
                 default:
                     throw new UnsupportedRepositoryOperationException("Unsupported operand value type " + val.getType());
@@ -300,7 +325,14 @@ public class QueryResolver {
         }
     }
 
-    private String escapeString(String string) {
-        return string.replace("\\", "\\\\").replace("'", "\\'");
+    private void addMappedProperty(StringBuffer buff, String propertyName) throws NotMappedElvisProperty {
+        ElvisPropertyMapping propertyByJCR = null;
+        for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
+            propertyByJCR = elvisTypeMapping.getPropertyByJCR(propertyName);
+        }
+        if (propertyByJCR == null) {
+            throw new NotMappedElvisProperty(propertyName);
+        }
+        buff.append(propertyByJCR.getElvisName());
     }
 }
