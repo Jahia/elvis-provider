@@ -101,7 +101,7 @@ public class ElvisDataSource extends FilesDataSource {
                 childrenList.add(new ExternalFile(ExternalFile.FileType.FOLDER, element.getString("assetPath"), null, null));
             }
 
-            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=folderPath:" + WebUtils.escapePath(path));
+            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=folderPath:" + WebUtils.escapePath("\"" + path + "\"") + "&num=-1");
             JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
             for (int i = 0; i < searchJsonArray.length(); i++) {
                 childrenList.add(createExternalFile(searchJsonArray, i));
