@@ -99,34 +99,6 @@ public class QueryResolver {
             }
         }
 
-        if (query.getOrderings() != null) {
-            boolean isFirst = true;
-            StringBuffer tmpBuf = new StringBuffer();
-            for (Ordering ordering : query.getOrderings()) {
-                tmpBuf.setLength(0);
-                try {
-                    addOperand(tmpBuf, ordering.getOperand());
-                    if (isFirst) {
-                        buff.append("&sort=");
-                        isFirst = false;
-                    } else {
-                        buff.append(",");
-                    }
-                    buff.append(tmpBuf);
-                    String order = ordering.getOrder();
-                    if (QueryObjectModelConstants.JCR_ORDER_ASCENDING.equals(order)) {
-                        buff.append("-").append("asc");
-                    } else if (QueryObjectModelConstants.JCR_ORDER_DESCENDING.equals(order)) {
-                        buff.append("-").append("desc");
-                    }
-//                    if (tmpBuf.toString().equals(" myscore ")) {
-//                        buff.insert(buff.indexOf(" FROM"), ", SCORE() as myscore ");
-//                    }
-                } catch (NotMappedElvisProperty ignore) { //ignore ordering by not mapped properties
-                }
-            }
-        }
-
         // Set limit
         buff.append("&num=").append(query.getLimit());
 
