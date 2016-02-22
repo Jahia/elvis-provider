@@ -33,6 +33,8 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.jahia.api.Constants;
+import org.jahia.modules.external.ExternalDataSource;
+import org.jahia.modules.external.ExternalQuery;
 import org.jahia.utils.WebUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -51,7 +53,7 @@ import java.util.*;
  *
  * @author Damien GAILLARD
  */
-public class ElvisDataSource extends FilesDataSource {
+public class ElvisDataSource extends FilesDataSource implements ExternalDataSource.Searchable {
     private static final Logger logger = LoggerFactory.getLogger(ElvisDataSource.class);
 
     private CookieStore cookieStore = new BasicCookieStore();
@@ -60,7 +62,7 @@ public class ElvisDataSource extends FilesDataSource {
     private String userName;
     private String password;
     private String url;
-    private ElvisConfiguration configuration;
+    protected ElvisConfiguration configuration;
 
     @Override
     public ExternalFile getExternalFile(String path) throws PathNotFoundException {
@@ -175,15 +177,39 @@ public class ElvisDataSource extends FilesDataSource {
         //Logout
         try {
             getDataFromApi("/logout");
+            httpClient.close();
         } catch (IOException e) {
             logger.error("Could not logout from the ELVIS API !", e.getMessage());
         }
-        try {
-            httpClient.close();
-        } catch (IOException e) {
-            logger.error("Could not close from the ELVIS API !", e.getMessage());
+    }
+
+    @Override
+    public List<String> search(ExternalQuery query) throws RepositoryException {
+        QueryResolver queryResolver = new QueryResolver(this, query);
+        String sql = queryResolver.resolve();
+
+        // Not mapped or unsupported queries treated as empty.
+        if (StringUtils.isBlank(sql)) {
+            return Collections.emptyList();
         }
 
+        if (logger.isDebugEnabled()) {
+            logger.debug("Elvis query " + sql);
+        }
+
+        List<String> pathList = new ArrayList<>();
+        try {
+            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=" + sql);
+            JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+            for (int i = 0; i < searchJsonArray.length(); i++) {
+                JSONObject hit = searchJsonArray.getJSONObject(i);
+                pathList.add(hit.getJSONObject("metadata").getString("assetPath"));
+            }
+            return pathList;
+        } catch (Exception e) {
+            logger.error(e.getMessage(), e);
+            return Collections.emptyList();
+        }
     }
 
     public void setUserName(String userName) {
@@ -262,13 +288,13 @@ public class ElvisDataSource extends FilesDataSource {
             }
         }
 
-
         for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
             for (ElvisPropertyMapping propertyMapping : elvisTypeMapping.getProperties()) {
                 String elvisName = propertyMapping.getElvisName();
                 String jcrName = propertyMapping.getJcrName();
                 if (elMetadata.has(elvisName) && !externalFile.getProperties().containsKey(jcrName)) {
-                    if (!jcrName.equals(Constants.JCR_CREATED) && !jcrName.equals(Constants.JCR_LASTMODIFIED) && !jcrName.equals(Constants.JCR_MIMETYPE)) {
+                    // Property [jcr:created] and [jcr:modified] are set at the ExternalFile instantiation, the [jcr:mymeType] is need to be set as content type also and jcr:content is not exactly a property but is used as a property for the search
+                    if (!jcrName.equals(Constants.JCR_CREATED) && !jcrName.equals(Constants.JCR_LASTMODIFIED) && !jcrName.equals(Constants.JCR_MIMETYPE) && !jcrName.equals(Constants.JCR_CONTENT)) {
                         externalFile.getProperties().put(jcrName, new String[]{elMetadata.getString(elvisName)});
                     } else if (jcrName.equals(Constants.JCR_MIMETYPE)) {
                         String mimeType = elMetadata.getString(elvisName);

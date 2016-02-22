@@ -26,6 +26,8 @@ package org.jahia.modules.external.elvis;
 import java.util.*;
 
 /**
+ * This is the Configuration file for Elvis API
+ *
  * @author Damien GAILLARD
  */
 public class ElvisConfiguration {

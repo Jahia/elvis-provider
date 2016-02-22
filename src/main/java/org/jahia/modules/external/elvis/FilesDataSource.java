@@ -44,7 +44,7 @@ import java.util.*;
 public abstract class FilesDataSource implements ExternalDataSource, ExternalDataSource.CanLoadChildrenInBatch, ExternalDataSource.CanCheckAvailability, ExternalDataSource.Initializable  {
 
     private static final Logger logger = LoggerFactory.getLogger(FilesDataSource.class);
-    private static final Set<String> SUPPORTED_NODE_TYPES = new HashSet<String>(Arrays.asList(Constants.JAHIANT_FILE, Constants.JAHIANT_FOLDER, Constants.JCR_CONTENT));
+    private static final Set<String> SUPPORTED_NODE_TYPES = new HashSet<>(Arrays.asList(Constants.JAHIANT_FILE, Constants.JAHIANT_FOLDER, Constants.NT_RESOURCE));
 
     private static final String THUMBNAIL_CONSTANT = "thumbnail";
     private static final List<String> JCR_CONTENT_LIST = Arrays.asList(Constants.JCR_CONTENT);
@@ -116,7 +116,7 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
             } else if (externalFile.getType().equals(Constants.JAHIANT_FOLDER)) {
                 List<ExternalFile> files = getChildrenFiles(path);
                 if (files.size() > 0) {
-                    List<String> children = new LinkedList<String>();
+                    List<String> children = new LinkedList<>();
                     for (ExternalFile object : files) {
                         children.add(object.getName());
                     }
@@ -144,7 +144,7 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
             } else if (externalFile.getType().equals(Constants.JAHIANT_FOLDER)) {
                 List<ExternalFile>  files = getChildrenFiles(externalFile.getPath());
                 if (files.size() > 0) {
-                    List<ExternalData> children = new LinkedList<ExternalData>();
+                    List<ExternalData> children = new LinkedList<>();
                     for (ExternalFile object : files) {
                         children.add(object);
                         if (object.getType().equals(Constants.JAHIANT_FILE)) {

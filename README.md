@@ -1,13 +1,12 @@
 # Elvis External Provider
 
 ### INFORMATION
-This module allow you to create a mount point in your Digital Factory in order to browse your folders/files on your Elvis Server.
-This version is providing browsing only, the version 2 will provide the search.
+This module allow you to create a mount point in your Digital Factory in order to browse and search your folders/files on your Elvis Server.
 
 ### MINIMAL REQUIREMENTS
-Digital Factory 7.1.0.1
-DF Module - External data provider V3.0.1 
-Elvis DAM V5
+* Digital Factory 7.1.0.1
+* DF Module - External data provider V3.0.1 
+* Elvis DAM V5
 
 ### PROVIDED MAPPING
 By default the module as a default mapping for all files and three extended mapping for images, documents and pdf.

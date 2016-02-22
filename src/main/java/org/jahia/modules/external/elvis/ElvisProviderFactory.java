@@ -42,7 +42,7 @@ import javax.jcr.RepositoryException;
 import java.util.List;
 
 /**
- *
+ * This is the provider for Elvis API
  *
  * @author Damien GAILLARD
  */

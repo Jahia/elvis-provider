@@ -24,6 +24,9 @@
 
                 <bean p:elvisName="mimeType" p:jcrName="jcr:mimeType"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+
+                <bean p:elvisName="textContent" p:jcrName="jcr:content"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
             </list>
         </property>
     </bean>
