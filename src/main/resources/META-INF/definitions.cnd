@@ -11,4 +11,5 @@
  - url (string) mandatory indexed=no nofulltext
  - userName (string) mandatory indexed=no nofulltext
  - password (string) mandatory indexed=no noqueryorder nofulltext
+ - fileLimit (string) mandatory indexed=no noqueryorder nofulltext
 

@@ -20,9 +20,20 @@
 <%--@elvariable id="url" type="org.jahia.services.render.URLGenerator"--%>
 <%--@elvariable id="flowRequestContext" type="org.springframework.webflow.execution.RequestContext"--%>
 <%--@elvariable id="elvisFactory" type="org.jahia.modules.external.elvis.admin.MountPointFactory"--%>
+<template:addResources type="javascript" resources="jquery.min.js"/>
 <template:addResources type="javascript" resources="admin/angular.min.js"/>
 <template:addResources type="javascript" resources="admin/app/folderPicker.js"/>
 <template:addResources type="css" resources="admin/app/folderPicker.css"/>
+
+<template:addResources>
+    <script>
+        $(document).ready(function() {
+            if ($('#fileLimit').val() == '') {
+                $('#fileLimit').val('50');
+            }
+        });
+    </script>
+</template:addResources>
 
 <h1 class="page-header"><fmt:message key="elvisnt_mountPoint"/></h1>
 <div class="folderPickerApp" ng-app="folderPicker">
@@ -61,6 +72,16 @@
                             <fmt:message key="elvisnt_mountPoint.password"/> <span style="color: red">*</span>
                         </form:label>
                         <form:password path="password" showPassword="true"/>
+                    </div>
+
+                    <div class="row-fluid">
+                        <div class="alert  alert-info">
+                            <fmt:message key="elvisnt_mountPoint.fileLimit.info"/>
+                        </div>
+                        <form:label path="fileLimit">
+                            <fmt:message key="elvisnt_mountPoint.fileLimit"/> <span style="color: red">*</span>
+                        </form:label>
+                        <form:input path="fileLimit" showPassword="true"/>
                     </div>
 
                     <div class="row-fluid">

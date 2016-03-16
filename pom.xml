@@ -32,8 +32,8 @@
         <connection>scm:git:git@github.com:Jahia/elvis-provider.git</connection>
         <developerConnection>scm:git:git@github.com:Jahia/elvis-provider.git</developerConnection>
         <url>scm:git:git@github.com:Jahia/elvis-provider.git</url>
-      <tag>HEAD</tag>
-  </scm>
+        <tag>HEAD</tag>
+    </scm>
 
     <repositories>
         <repository>

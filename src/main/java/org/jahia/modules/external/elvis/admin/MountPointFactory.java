@@ -44,6 +44,7 @@ public class MountPointFactory extends AbstractMountPointFactory {
     public static final String URL = "url";
     public static final String USER_NAME = "userName";
     public static final String PASSWORD = "password";
+    public static final String FILE_LIMIT = "fileLimit";
 
     @NotEmpty
     private String name;
@@ -56,6 +57,8 @@ public class MountPointFactory extends AbstractMountPointFactory {
     private String userName;
     @NotEmpty
     private String password;
+    @NotEmpty
+    private String fileLimit;
 
     @Override
     public String getName() {
@@ -77,6 +80,7 @@ public class MountPointFactory extends AbstractMountPointFactory {
         mountNode.setProperty(URL, url);
         mountNode.setProperty(USER_NAME, userName);
         mountNode.setProperty(PASSWORD, password);
+        mountNode.setProperty(FILE_LIMIT, fileLimit);
     }
 
     @Override
@@ -91,6 +95,7 @@ public class MountPointFactory extends AbstractMountPointFactory {
         this.userName = nodeWrapper.getPropertyAsString(USER_NAME);
         this.password = nodeWrapper.getPropertyAsString(PASSWORD);
         this.url = nodeWrapper.getPropertyAsString(URL);
+        this.fileLimit = nodeWrapper.getPropertyAsString(FILE_LIMIT);
     }
 
     public void setName(String name) {
@@ -123,5 +128,13 @@ public class MountPointFactory extends AbstractMountPointFactory {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getFileLimit() {
+        return fileLimit;
+    }
+
+    public void setFileLimit(String fileLimit) {
+        this.fileLimit = fileLimit;
     }
 }
