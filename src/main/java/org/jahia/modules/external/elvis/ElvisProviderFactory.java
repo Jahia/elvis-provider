@@ -26,6 +26,7 @@ package org.jahia.modules.external.elvis;
 import org.jahia.exceptions.JahiaInitializationException;
 import org.jahia.modules.external.ExternalContentStoreProvider;
 import org.jahia.modules.external.elvis.admin.MountPointFactory;
+import org.jahia.modules.external.elvis.communication.ElvisSession;
 import org.jahia.services.SpringContextSingleton;
 import org.jahia.services.content.JCRNodeWrapper;
 import org.jahia.services.content.JCRSessionFactory;
@@ -77,11 +78,12 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
 
         // Define the datasource using the credentials defined in the mount point
         ElvisDataSource dataSource = new ElvisDataSource();
-        dataSource.setUrl(mountPoint.getPropertyAsString(MountPointFactory.URL));
-        dataSource.setUserName(mountPoint.getPropertyAsString(MountPointFactory.USER_NAME));
-        dataSource.setPassword(mountPoint.getPropertyAsString(MountPointFactory.PASSWORD));
-        // Set provider in the datasource
+        // Set configuration and elvisSession in the datasource
         dataSource.setConfiguration((ElvisConfiguration) applicationContext.getBean("elvisConfiguration"));
+        dataSource.setElvisSession(new ElvisSession(mountPoint.getPropertyAsString(MountPointFactory.URL),
+                                                    mountPoint.getPropertyAsString(MountPointFactory.USER_NAME),
+                                                    mountPoint.getPropertyAsString(MountPointFactory.PASSWORD),
+                                                    mountPoint.getPropertyAsString(MountPointFactory.FILE_LIMIT)));
         // Start the datasource
         dataSource.start();
         // Finalize the provider setup with datasource and some JCR parameters

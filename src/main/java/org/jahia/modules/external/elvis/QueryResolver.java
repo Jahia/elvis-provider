@@ -53,7 +53,7 @@ public class QueryResolver {
     public QueryResolver(ElvisDataSource dataSource, ExternalQuery query) {
         this.dataSource = dataSource;
         this.query = query;
-        configuration = dataSource.configuration;
+        this.configuration = dataSource.configuration;
     }
 
     public String resolve() throws RepositoryException {

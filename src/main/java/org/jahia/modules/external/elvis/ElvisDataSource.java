@@ -24,17 +24,13 @@
 package org.jahia.modules.external.elvis;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.client.CookieStore;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.protocol.HttpClientContext;
-import org.apache.http.impl.client.BasicCookieStore;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalDataSource;
 import org.jahia.modules.external.ExternalQuery;
+import org.jahia.modules.external.elvis.communication.BaseElvisActionCallback;
+import org.jahia.modules.external.elvis.communication.ElvisSession;
 import org.jahia.utils.WebUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -56,137 +52,132 @@ import java.util.*;
 public class ElvisDataSource extends FilesDataSource implements ExternalDataSource.Searchable {
     private static final Logger logger = LoggerFactory.getLogger(ElvisDataSource.class);
 
-    private CookieStore cookieStore = new BasicCookieStore();
-    private CloseableHttpClient httpClient;
-    private HttpClientContext context;
-    private String userName;
-    private String password;
-    private String url;
     protected ElvisConfiguration configuration;
+    protected ElvisSession elvisSession;
 
     @Override
     public ExternalFile getExternalFile(String path) throws PathNotFoundException {
         if (path.equals("/")) {
             return new ExternalFile(ExternalFile.FileType.FOLDER, path, null, null);
         } else {
-            try {
-                CloseableHttpResponse searchResponse = getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
-                JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
-                if (searchJsonArray.length() > 0) {
-                    return createExternalFile(searchJsonArray, 0);
-                } else {
-                    String parentPath = StringUtils.substringBeforeLast(path, "/");
-                    CloseableHttpResponse browseResponse = getDataFromApi("/browse?path=" + WebUtils.escapePath(parentPath));
-                    JSONArray jsonArray = getBrowseResponse(browseResponse);
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        JSONObject element = jsonArray.getJSONObject(i);
-                        if (element.getString("assetPath").equals(path)) {
-                            return new ExternalFile(ExternalFile.FileType.FOLDER, path, null, null);
+            final String pathToUse = path;
+            return elvisSession.execute(new BaseElvisActionCallback<ExternalFile>(elvisSession) {
+                @Override
+                public ExternalFile doInElvis() throws Exception {
+                    CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + pathToUse + "\""));
+                    JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                    if (searchJsonArray.length() > 0) {
+                        return createExternalFile(searchJsonArray, 0);
+                    } else {
+                        String parentPath = StringUtils.substringBeforeLast(pathToUse, "/");
+                        CloseableHttpResponse browseResponse = elvisSession.getDataFromApi("/browse?path=" + WebUtils.escapePath(parentPath));
+                        JSONArray jsonArray = getBrowseResponse(browseResponse);
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            JSONObject element = jsonArray.getJSONObject(i);
+                            if (element.getString("assetPath").equals(pathToUse)) {
+                                return new ExternalFile(ExternalFile.FileType.FOLDER, pathToUse, null, null);
+                            }
                         }
                     }
+                    throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
                 }
-            } catch (Exception e) {
-                logger.error(e.getMessage(), e);
-            }
-            throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
+            });
         }
     }
 
     @Override
     public List<ExternalFile> getChildrenFiles(String path) throws RepositoryException {
         List<ExternalFile> childrenList = new ArrayList<>();
-        try {
-            CloseableHttpResponse browseResponse = getDataFromApi("/browse?path=" + WebUtils.escapePath(path));
-            JSONArray jsonArray = getBrowseResponse(browseResponse);
-            for (int i = 0; i < jsonArray.length(); i++) {
-                JSONObject element = jsonArray.getJSONObject(i);
-                childrenList.add(new ExternalFile(ExternalFile.FileType.FOLDER, element.getString("assetPath"), null, null));
+        final String pathToUse = path;
+        List<ExternalFile> externalFolders = elvisSession.execute(new BaseElvisActionCallback<List<ExternalFile>>(elvisSession) {
+            @Override
+            public List<ExternalFile> doInElvis() throws Exception {
+                List<ExternalFile> folders = new ArrayList<ExternalFile>();
+                CloseableHttpResponse browseResponse = elvisSession.getDataFromApi("/browse?path=" + WebUtils.escapePath(pathToUse));
+                JSONArray jsonArray = getBrowseResponse(browseResponse);
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject element = jsonArray.getJSONObject(i);
+                    folders.add(new ExternalFile(ExternalFile.FileType.FOLDER, element.getString("assetPath"), null, null));
+                }
+                return folders;
             }
+        });
+        childrenList.addAll(externalFolders);
 
-            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=folderPath:" + WebUtils.escapePath("\"" + path + "\"") + "&num=-1");
-            JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
-            for (int i = 0; i < searchJsonArray.length(); i++) {
-                childrenList.add(createExternalFile(searchJsonArray, i));
+        List<ExternalFile> externalFiles = elvisSession.execute(new BaseElvisActionCallback<List<ExternalFile>>(elvisSession) {
+            @Override
+            public List<ExternalFile> doInElvis() throws Exception {
+                List<ExternalFile> files = new ArrayList<ExternalFile>();
+                CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=folderPath:" + WebUtils.escapePath("\"" + pathToUse + "\"") + "&num=" + elvisSession.getFileLimit());
+                JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                for (int i = 0; i < searchJsonArray.length(); i++) {
+                    files.add(createExternalFile(searchJsonArray, i));
+                }
+                return files;
             }
-            return childrenList;
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-            throw new RepositoryException(e);
-        }
+        });
+        childrenList.addAll(externalFiles);
+
+        return childrenList;
     }
 
     @Override
     public Binary getFileBinary(ExternalFile file) throws PathNotFoundException {
-        try {
-            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + file.getPath() + "\""));
-            JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
-            if (searchJsonArray.length() > 0) {
-                JSONObject element = searchJsonArray.getJSONObject(0);
-                JSONObject elMetadata = element.getJSONObject("metadata");
-                long fileSize = elMetadata.has("fileSize")?elMetadata.getJSONObject("fileSize").getLong("value"):-1;
-                return new ElvisBinaryImpl(element.getString("originalUrl"), fileSize, this.context, this.httpClient);
+        final String path = file.getPath();
+        return elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
+            @Override
+            public ElvisBinaryImpl doInElvis() throws Exception {
+                CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
+                JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                if (searchJsonArray.length() > 0) {
+                    JSONObject element = searchJsonArray.getJSONObject(0);
+                    JSONObject elMetadata = element.getJSONObject("metadata");
+                    long fileSize = elMetadata.has("fileSize")?elMetadata.getJSONObject("fileSize").getLong("value"):-1;
+                    return new ElvisBinaryImpl(element.getString("originalUrl"), fileSize, elvisSession);
+                }
+                throw new PathNotFoundException(path);
             }
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-        }
-        throw new PathNotFoundException(file.getPath());
+        });
     }
 
     @Override
     public Binary getThumbnailBinary(ExternalFile file) throws PathNotFoundException {
-        try {
-            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + file.getPath() + "\""));
-            JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
-            if (searchJsonArray.length() > 0) {
-                JSONObject element = searchJsonArray.getJSONObject(0);
-                if (element.has("thumbnailUrl")) {
-                    return new ElvisBinaryImpl(element.getString("thumbnailUrl"), -1, this.context, this.httpClient);
+        final String path = file.getPath();
+        return elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
+            @Override
+            public ElvisBinaryImpl doInElvis() throws Exception {
+                CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
+                JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                if (searchJsonArray.length() > 0) {
+                    JSONObject element = searchJsonArray.getJSONObject(0);
+                    if (element.has("thumbnailUrl")) {
+                        return new ElvisBinaryImpl(element.getString("thumbnailUrl"), -1, elvisSession);
+                    }
                 }
+                throw new PathNotFoundException(path + "/thumbnail");
             }
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-        }
-        throw new PathNotFoundException(file.getPath()+ "/thumbnail");
+        });
     }
 
     @Override
     public boolean isAvailable() throws RepositoryException {
-        if (this.context.getCookieStore().getCookies().size() == 0) {
-            try {
-                // Execute get request to connect to the Elvis API
-                getDataFromApi("/login?username=" + this.userName + "&password=" + this.password);
-                return this.context.getCookieStore().getCookies().size() > 0;
-            } catch(IOException e) {
-                logger.error("Could not login to the ELVIS API !", e.getMessage());
-                return false;
-            }
-        } else {
-            return true;
-        }
+        return elvisSession.isSessionAvailable();
     }
 
     @Override
     public void start() {
-        this.context = HttpClientContext.create();
-        this.context.setCookieStore(this.cookieStore);
-        this.httpClient = HttpClientBuilder.create().setDefaultCookieStore(this.cookieStore).build();
+        elvisSession.initHttp();
     }
 
     @Override
     public void stop() {
-        //Logout
-        try {
-            getDataFromApi("/logout");
-            httpClient.close();
-        } catch (IOException e) {
-            logger.error("Could not logout from the ELVIS API !", e.getMessage());
-        }
+        elvisSession.logout();
     }
 
     @Override
     public List<String> search(ExternalQuery query) throws RepositoryException {
         QueryResolver queryResolver = new QueryResolver(this, query);
-        String sql = queryResolver.resolve();
+        final String sql = queryResolver.resolve();
 
         // Not mapped or unsupported queries treated as empty.
         if (StringUtils.isBlank(sql)) {
@@ -197,60 +188,51 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
             logger.debug("Elvis query " + sql);
         }
 
-        List<String> pathList = new ArrayList<>();
-        try {
-            CloseableHttpResponse searchResponse = getDataFromApi("/search?q=" + sql);
-            JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
-            for (int i = 0; i < searchJsonArray.length(); i++) {
-                JSONObject hit = searchJsonArray.getJSONObject(i);
-                pathList.add(hit.getJSONObject("metadata").getString("assetPath"));
+        return elvisSession.execute(new BaseElvisActionCallback<List<String>>(elvisSession) {
+            @Override
+            public List<String> doInElvis() throws Exception {
+                List<String> pathList = new ArrayList<>();
+                CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=" + sql);
+                JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                for (int i = 0; i < searchJsonArray.length(); i++) {
+                    JSONObject hit = searchJsonArray.getJSONObject(i);
+                    pathList.add(hit.getJSONObject("metadata").getString("assetPath"));
+                }
+                return pathList;
             }
-            return pathList;
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-            return Collections.emptyList();
-        }
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
+        });
     }
 
     public void setConfiguration(ElvisConfiguration configuration) {
         this.configuration = configuration;
     }
 
-    public void setUrl(String url) {
-        if (url.endsWith("/")) {
-            url = StringUtils.substringBeforeLast(url, "/");
-        }
-        this.url = url;
-    }
-
-    private CloseableHttpResponse getDataFromApi(String endOfUri) throws IOException {
-        HttpGet get = new HttpGet(this.url + "/services" + endOfUri);
-        get.setHeader("Accept", "Application/Json");
-        return httpClient.execute(get, this.context);
+    public void setElvisSession(ElvisSession elvisSession) {
+        this.elvisSession = elvisSession;
     }
 
     private JSONArray getBrowseResponse(CloseableHttpResponse browseResponse) throws Exception {
         if (browseResponse.getStatusLine().getStatusCode() == 200) {
-            return new JSONArray(EntityUtils.toString(browseResponse.getEntity()));
+            String jsonString = EntityUtils.toString(browseResponse.getEntity());
+            try {
+                return new JSONArray(jsonString);
+            } catch (JSONException e) {
+                throw new JSONException(jsonString);
+            }
         }
         throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
     }
 
     private JSONArray getHitsInSearchResponse(CloseableHttpResponse searchResponse) throws Exception {
         if (searchResponse.getStatusLine().getStatusCode() == 200) {
-            JSONObject jsonObject = new JSONObject(EntityUtils.toString(searchResponse.getEntity()));
+            String jsonString = EntityUtils.toString(searchResponse.getEntity());
+            JSONObject jsonObject = new JSONObject(jsonString);
             if (!jsonObject.has("errorcode")) {
                 if (jsonObject.has("hits")) {
                     return jsonObject.getJSONArray("hits");
                 }
+            } else {
+                throw new JSONException(jsonString);
             }
         }
         throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
