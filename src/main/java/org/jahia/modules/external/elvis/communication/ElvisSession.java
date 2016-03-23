@@ -1,3 +1,26 @@
+/**
+ * ==========================================================================================
+ * =                            JAHIA'S ENTERPRISE DISTRIBUTION                             =
+ * ==========================================================================================
+ *
+ *                                  http://www.jahia.com
+ *
+ * JAHIA'S ENTERPRISE DISTRIBUTIONS LICENSING - IMPORTANT INFORMATION
+ * ==========================================================================================
+ *
+ *     Copyright (C) 2002-2016 Jahia Solutions Group. All rights reserved.
+ *
+ *     This file is part of a Jahia's Enterprise Distribution.
+ *
+ *     Jahia's Enterprise Distributions must be used in accordance with the terms
+ *     contained in the Jahia Solutions Group Terms & Conditions as well as
+ *     the Jahia Sustainable Enterprise License (JSEL).
+ *
+ *     For questions regarding licensing, support, production usage...
+ *     please contact our team at sales@jahia.com or go to http://www.jahia.com/license.
+ *
+ * ==========================================================================================
+ */
 package org.jahia.modules.external.elvis.communication;
 
 import org.apache.commons.lang.StringUtils;
@@ -11,7 +34,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jcr.PathNotFoundException;
+import javax.jcr.RepositoryException;
 import java.io.IOException;
 
 /**
@@ -37,7 +60,7 @@ public class ElvisSession {
         this.fileLimit = fileLimit;
     }
 
-    public <X> X execute(ElvisSessionCallback<X> callback) throws PathNotFoundException {
+    public <X> X execute(ElvisSessionCallback<X> callback) throws RepositoryException {
         try {
             return callback.doInElvis();
         } catch (Exception e) {

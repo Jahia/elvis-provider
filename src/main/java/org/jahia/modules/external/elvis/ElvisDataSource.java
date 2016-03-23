@@ -61,27 +61,34 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
             return new ExternalFile(ExternalFile.FileType.FOLDER, path, null, null);
         } else {
             final String pathToUse = path;
-            return elvisSession.execute(new BaseElvisActionCallback<ExternalFile>(elvisSession) {
-                @Override
-                public ExternalFile doInElvis() throws Exception {
-                    CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + pathToUse + "\""));
-                    JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
-                    if (searchJsonArray.length() > 0) {
-                        return createExternalFile(searchJsonArray, 0);
-                    } else {
-                        String parentPath = StringUtils.substringBeforeLast(pathToUse, "/");
-                        CloseableHttpResponse browseResponse = elvisSession.getDataFromApi("/browse?path=" + WebUtils.escapePath(parentPath));
-                        JSONArray jsonArray = getBrowseResponse(browseResponse);
-                        for (int i = 0; i < jsonArray.length(); i++) {
-                            JSONObject element = jsonArray.getJSONObject(i);
-                            if (element.getString("assetPath").equals(pathToUse)) {
-                                return new ExternalFile(ExternalFile.FileType.FOLDER, pathToUse, null, null);
+            try {
+                return elvisSession.execute(new BaseElvisActionCallback<ExternalFile>(elvisSession) {
+                    @Override
+                    public ExternalFile doInElvis() throws Exception {
+                        CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + pathToUse + "\""));
+                        JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                        if (searchJsonArray.length() > 0) {
+                            return createExternalFile(searchJsonArray, 0);
+                        } else {
+                            String parentPath = StringUtils.substringBeforeLast(pathToUse, "/");
+                            CloseableHttpResponse browseResponse = elvisSession.getDataFromApi("/browse?path=" + WebUtils.escapePath(parentPath));
+                            JSONArray jsonArray = getBrowseResponse(browseResponse);
+                            for (int i = 0; i < jsonArray.length(); i++) {
+                                JSONObject element = jsonArray.getJSONObject(i);
+                                if (element.getString("assetPath").equals(pathToUse)) {
+                                    return new ExternalFile(ExternalFile.FileType.FOLDER, pathToUse, null, null);
+                                }
                             }
                         }
+                        throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
                     }
-                    throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
-                }
-            });
+                });
+            } catch (PathNotFoundException e) {
+                throw e;
+            } catch (RepositoryException e) {
+                logger.error(e.getMessage(), e);
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -124,39 +131,53 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     @Override
     public Binary getFileBinary(ExternalFile file) throws PathNotFoundException {
         final String path = file.getPath();
-        return elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
-            @Override
-            public ElvisBinaryImpl doInElvis() throws Exception {
-                CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
-                JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
-                if (searchJsonArray.length() > 0) {
-                    JSONObject element = searchJsonArray.getJSONObject(0);
-                    JSONObject elMetadata = element.getJSONObject("metadata");
-                    long fileSize = elMetadata.has("fileSize")?elMetadata.getJSONObject("fileSize").getLong("value"):-1;
-                    return new ElvisBinaryImpl(element.getString("originalUrl"), fileSize, elvisSession);
+        try {
+            return elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
+                @Override
+                public ElvisBinaryImpl doInElvis() throws Exception {
+                    CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
+                    JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                    if (searchJsonArray.length() > 0) {
+                        JSONObject element = searchJsonArray.getJSONObject(0);
+                        JSONObject elMetadata = element.getJSONObject("metadata");
+                        long fileSize = elMetadata.has("fileSize")?elMetadata.getJSONObject("fileSize").getLong("value"):-1;
+                        return new ElvisBinaryImpl(element.getString("originalUrl"), fileSize, elvisSession);
+                    }
+                    throw new PathNotFoundException(path);
                 }
-                throw new PathNotFoundException(path);
-            }
-        });
+            });
+        } catch (PathNotFoundException e) {
+            throw e;
+        } catch (RepositoryException e) {
+            logger.error(e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public Binary getThumbnailBinary(ExternalFile file) throws PathNotFoundException {
         final String path = file.getPath();
-        return elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
-            @Override
-            public ElvisBinaryImpl doInElvis() throws Exception {
-                CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
-                JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
-                if (searchJsonArray.length() > 0) {
-                    JSONObject element = searchJsonArray.getJSONObject(0);
-                    if (element.has("thumbnailUrl")) {
-                        return new ElvisBinaryImpl(element.getString("thumbnailUrl"), -1, elvisSession);
+        try {
+            return elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
+                @Override
+                public ElvisBinaryImpl doInElvis() throws Exception {
+                    CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
+                    JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                    if (searchJsonArray.length() > 0) {
+                        JSONObject element = searchJsonArray.getJSONObject(0);
+                        if (element.has("thumbnailUrl")) {
+                            return new ElvisBinaryImpl(element.getString("thumbnailUrl"), -1, elvisSession);
+                        }
                     }
+                    throw new PathNotFoundException(path + "/thumbnail");
                 }
-                throw new PathNotFoundException(path + "/thumbnail");
-            }
-        });
+            });
+        } catch (PathNotFoundException e) {
+            throw e;
+        } catch (RepositoryException e) {
+            logger.error(e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -220,7 +241,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 throw new JSONException(jsonString);
             }
         }
-        throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
+        throw new RepositoryException("The request was not correctly executed please check your Elvis API Server");
     }
 
     private JSONArray getHitsInSearchResponse(CloseableHttpResponse searchResponse) throws Exception {
@@ -235,7 +256,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 throw new JSONException(jsonString);
             }
         }
-        throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
+        throw new RepositoryException("The request was not correctly executed please check your Elvis API Server");
     }
 
     private ExternalFile createExternalFile(JSONArray searchJsonArray, int index) throws JSONException, IOException, RepositoryException {

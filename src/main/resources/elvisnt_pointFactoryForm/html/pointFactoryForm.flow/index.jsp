@@ -29,7 +29,7 @@
     <script>
         $(document).ready(function() {
             if ($('#fileLimit').val() == '') {
-                $('#fileLimit').val('50');
+                $('#fileLimit').val('-1');
             }
         });
     </script>
