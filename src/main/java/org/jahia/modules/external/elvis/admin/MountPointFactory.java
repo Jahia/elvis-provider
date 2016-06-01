@@ -45,6 +45,8 @@ public class MountPointFactory extends AbstractMountPointFactory {
     public static final String USER_NAME = "userName";
     public static final String PASSWORD = "password";
     public static final String FILE_LIMIT = "fileLimit";
+    public static final String USE_PREVIEW = "usePreview";
+    public static final String PREVIEW_SETTINGS = "previewSettings";
 
     @NotEmpty
     private String name;
@@ -59,6 +61,8 @@ public class MountPointFactory extends AbstractMountPointFactory {
     private String password;
     @NotEmpty
     private String fileLimit;
+    private String previewSettings;
+    private boolean usePreview;
 
     @Override
     public String getName() {
@@ -81,6 +85,8 @@ public class MountPointFactory extends AbstractMountPointFactory {
         mountNode.setProperty(USER_NAME, userName);
         mountNode.setProperty(PASSWORD, password);
         mountNode.setProperty(FILE_LIMIT, fileLimit);
+        mountNode.setProperty(USE_PREVIEW, usePreview);
+        mountNode.setProperty(PREVIEW_SETTINGS, previewSettings);
     }
 
     @Override
@@ -96,6 +102,8 @@ public class MountPointFactory extends AbstractMountPointFactory {
         this.password = nodeWrapper.getPropertyAsString(PASSWORD);
         this.url = nodeWrapper.getPropertyAsString(URL);
         this.fileLimit = nodeWrapper.getPropertyAsString(FILE_LIMIT);
+        this.usePreview = nodeWrapper.getProperty(USE_PREVIEW).getBoolean();
+        this.previewSettings = nodeWrapper.getPropertyAsString(PREVIEW_SETTINGS);
     }
 
     public void setName(String name) {
@@ -136,5 +144,21 @@ public class MountPointFactory extends AbstractMountPointFactory {
 
     public void setFileLimit(String fileLimit) {
         this.fileLimit = fileLimit;
+    }
+
+    public boolean isUsePreview() {
+        return usePreview;
+    }
+
+    public void setUsePreview(boolean usePreview) {
+        this.usePreview = usePreview;
+    }
+
+    public String getPreviewSettings() {
+        return previewSettings;
+    }
+
+    public void setPreviewSettings(String previewSettings) {
+        this.previewSettings = previewSettings;
     }
 }
