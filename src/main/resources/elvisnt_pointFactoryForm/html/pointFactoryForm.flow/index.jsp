@@ -25,62 +25,221 @@
 <template:addResources type="javascript" resources="admin/app/folderPicker.js"/>
 <template:addResources type="css" resources="admin/app/folderPicker.css"/>
 
+<fmt:message key="elvis.label.select" var="labelSelect"/>
+<fmt:message key="elvis.label.remove" var="labelRemove"/>
+<fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.label.maxWidth" var="labelMaxWidth"/>
+<fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.label.maxHeight" var="labelMaxHeight"/>
+<fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.label.ppiDpi" var="labelPpiDpi"/>
+<fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.label.extension" var="labelExtension"/>
+<fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.error.fieldRequired" var="errorFieldRequired"/>
+<fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.error.numberOnly" var="errorNumberOnly"/>
+<fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.error.nameAlreadyTaken" var="errorNameAlreadyTaken"/>
+<fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.error.nameCharacters" var="errorNameCharacters"/>
+
 <template:addResources>
     <script>
-        var previewSettings = [];
+        var mapI18nMPF = {
+            labelSelect: '${functions:escapeJavaScript(labelSelect)}',
+            labelRemove: '${functions:escapeJavaScript(labelRemove)}',
+            labelMaxWidth: '${functions:escapeJavaScript(labelMaxWidth)}',
+            labelMaxHeight: '${functions:escapeJavaScript(labelMaxHeight)}',
+            labelPpiDpi: '${functions:escapeJavaScript(labelPpiDpi)}',
+            labelExtension: '${functions:escapeJavaScript(labelExtension)}',
+            errorFieldRequired: '${functions:escapeJavaScript(errorFieldRequired)}',
+            errorNumberOnly: '${functions:escapeJavaScript(errorNumberOnly)}',
+            errorNameAlreadyTaken: '${functions:escapeJavaScript(errorNameAlreadyTaken)}',
+            errorNameCharacters: '${functions:escapeJavaScript(errorNameCharacters)}'
+        };
 
-        function addPreviewSettings() {
-            $('#fieldsRequiredErrorMessage').hide();
-            if ($('#previewType').val() == ''
-                    || $('#previewName').val() == ''
-                    || $('#previewMaxWidth').val() == ''
-                    || $('#previewMaxHeight').val() == '') {
-                $('#fieldsErrorMessage').html('All fields are required!');
-                $('#fieldsErrorMessage').show();
-                return false;
-            }
+        var managePreviewSettings = {
+            settings: {video:[], image:[]},
+            init: function() {
+                if ($('#usePreview1').is(":checked")) {
+                    managePreviewSettings.togglePanel();
+                }
 
-            console.log(previewSettings);
+                if ($('#previewSettings').val() != '') {
+                    $('#emptyPreviewSettingsMessage').hide();
+                    managePreviewSettings.settings = JSON.parse($('#previewSettings').val());
+                    managePreviewSettings.updateTable();
+                }
+            },
+            add: function() {
+                if ($('#previewType').val() == 'image') {
+                    managePreviewSettings.settings.image.push({
+                        name: $('#previewName').val(),
+                        type: $('#previewType').val(),
+                        maxWidth: $('#previewMaxWidth').val(),
+                        maxHeight: $('#previewMaxHeight').val(),
+                        ppi: $('#previewPpi').val(),
+                        extension: $('#previewExtension').val()
+                    });
+                } else {
+                    managePreviewSettings.settings.video.push({
+                        name: $('#previewName').val(),
+                        type: $('#previewType').val(),
+                        maxWidth: $('#previewMaxWidth').val(),
+                        maxHeight: $('#previewMaxHeight').val(),
+                        extension: $('#previewExtension').val()
+                    });
+                }
 
-            for (var i in previewSettings) {
-                if (previewSettings[i].name == $('#previewName').val() && previewSettings[i].type == $('#previewType').val()) {
-                    $('#fieldsErrorMessage').html('A preview setting for this type already exist with this name!');
-                    $('#fieldsErrorMessage').show();
-                    return false;
+                managePreviewSettings.updateTable();
+                managePreviewSettings.updateInput();
+            },
+            clearErrorMessage: function() {
+                $('.previewError').hide();
+                $('.previewError').html('');
+                $('.previewError').parents('.control-group').removeClass('error');
+            },
+            clearForm: function() {
+                $('#previewType').val('');
+                $('#previewName').val('');
+                $('#previewMaxWidth').val('');
+                $('#previewMaxHeight').val('');
+                $('#previewPpi').parents('.control-group').hide();
+                $('#previewPpi').val('');
+                $('#previewExtension').parents('.control-group').hide();
+            },
+            remove: function(table, index) {
+                var array = (table == 'image')?managePreviewSettings.settings.image:managePreviewSettings.settings.video;
+                array.splice(index, 1);
+                managePreviewSettings.updateTable();
+                managePreviewSettings.updateInput();
+            },
+            showErrorMessage: function($input, message) {
+                $input.parents('.control-group').addClass('error');
+                var $helpBlock = $input.siblings('.previewError');
+                $helpBlock.html(message);
+                $helpBlock.show();
+            },
+            togglePanel: function() {
+                $('#previewBuilder').toggle();
+            },
+            updateForm: function() {
+                $('#previewPpi').parents('.control-group').hide();
+                $('#previewPpi').val('');
+                $('#previewExtension').parents('.control-group').hide();
+
+                if ($('#previewType').val() == 'video') {
+                    $('#previewExtension').html('<option value="">' + mapI18nMPF.labelSelect + '</option>' +
+                                                '<option value="mp4">mp4</option>' +
+                                                '<option value="flv">flv</option>');
+                    $('#previewExtension').parents('.control-group').show();
+                }
+
+                if ($('#previewType').val() == 'image') {
+                    $('#previewPpi').parents('.control-group').show();
+                    $('#previewExtension').html('<option value="">' + mapI18nMPF.labelSelect + '</option>' +
+                                                '<option value="jpg">jpg</option>' +
+                                                '<option value="png">png</option>' +
+                                                '<option value="tiff">tiff</option>');
+                    $('#previewExtension').parents('.control-group').show();
+                }
+            },
+            updateInput: function() {
+                $('#previewSettings').val(JSON.stringify(managePreviewSettings.settings));
+            },
+            updateTable: function() {
+                $('#previewSettingsBodyTable').html('');
+                if (managePreviewSettings.settings.length == 0) {
+                    $('#emptyPreviewSettingsMessage').show();
+                } else {
+                    for (var i in managePreviewSettings.settings.image) {
+                        $('#previewSettingsBodyTable').append('<tr>' +
+                                '<td>' + managePreviewSettings.settings.image[i].type + '</td>' +
+                                '<td>' + managePreviewSettings.settings.image[i].name + '</td>' +
+                                '<td><p>' + mapI18nMPF.labelMaxWidth + ': ' + managePreviewSettings.settings.image[i].maxWidth + '</p>' +
+                                '<p>' + mapI18nMPF.labelMaxHeight + ': ' + managePreviewSettings.settings.image[i].maxHeight + '</p>' +
+                                '<p>' + mapI18nMPF.labelPpiDpi + ': ' + managePreviewSettings.settings.image[i].ppi + '</p>' +
+                                '<p>' + mapI18nMPF.labelExtension + ': ' + managePreviewSettings.settings.image[i].extension + '</p></td>' +
+                                '<td><button type="button" class="btn btn-danger" onclick="managePreviewSettings.remove(\'image\', ' + i + ')">' + mapI18nMPF.labelRemove + '</button></td></tr>');
+                    }
+                    for (var i in managePreviewSettings.settings.video) {
+                        $('#previewSettingsBodyTable').append('<tr>' +
+                                '<td>' + managePreviewSettings.settings.video[i].type + '</td>' +
+                                '<td>' + managePreviewSettings.settings.video[i].name + '</td>' +
+                                '<td><p>' + mapI18nMPF.labelMaxWidth + ': ' + managePreviewSettings.settings.video[i].maxWidth + '</p>' +
+                                '<p>' + mapI18nMPF.labelMaxHeight + ': ' + managePreviewSettings.settings.video[i].maxHeight + '</p>' +
+                                '<p>' + mapI18nMPF.labelExtension + ': ' + managePreviewSettings.settings.video[i].extension + '</p></td>' +
+                                '<td><button type="button" class="btn btn-danger" onclick="managePreviewSettings.remove(\'video\', ' + i + ')">' + mapI18nMPF.labelRemove + '</button></td></tr>');
+                    }
+                }
+            },
+            validateForm: function() {
+                var isValid = true;
+                managePreviewSettings.clearErrorMessage();
+
+                if ($('#previewType').val() == '') {
+                    managePreviewSettings.showErrorMessage($('#previewType'), mapI18nMPF.errorFieldRequired);
+                    isValid = false;
+                } else {
+                    if ($('#previewExtension').val() == '') {
+                        managePreviewSettings.showErrorMessage($('#previewExtension'), mapI18nMPF.errorFieldRequired);
+                        isValid = false;
+                    }
+
+                    if ($('#previewType').val() == 'image') {
+                        if (!/^\d+$/.test($('#previewPpi').val())) {
+                            managePreviewSettings.showErrorMessage($('#previewPpi'), mapI18nMPF.errorNumberOnly);
+                            isValid = false;
+                        }
+                    }
+                }
+
+                if ($('#previewName').val() == '') {
+                    managePreviewSettings.showErrorMessage($('#previewName'), mapI18nMPF.errorFieldRequired);
+                    isValid = false;
+                } else {
+                    if (!/^([A-Za-z0-9\-\_]+)$/.test($('#previewName').val())) {
+                        managePreviewSettings.showErrorMessage($('#previewName'), mapI18nMPF.errorNameCharacters);
+                        isValid = false;
+                    }
+                }
+
+                if ($('#previewType').val() != '' && $('#previewName').val() != '') {
+                    var array = ($('#previewType').val() == 'image')?managePreviewSettings.settings.image:managePreviewSettings.settings.video;
+                    for (var i in array) {
+                        if (array[i].name == $('#previewName').val() && array[i].type == $('#previewType').val()) {
+                            managePreviewSettings.showErrorMessage($('#previewName'), mapI18nMPF.errorNameAlreadyTaken);
+                            isValid = false;
+                        }
+                    }
+                }
+
+                if ($('#previewMaxWidth').val() == '') {
+                    managePreviewSettings.showErrorMessage($('#previewMaxWidth'), mapI18nMPF.errorFieldRequired);
+                    isValid = false;
+                } else {
+                    if (!/^\d+$/.test($('#previewMaxWidth').val())) {
+                        managePreviewSettings.showErrorMessage($('#previewMaxWidth'), mapI18nMPF.errorNumberOnly);
+                        isValid = false;
+                    }
+                }
+
+                if ($('#previewMaxHeight').val() == '') {
+                    managePreviewSettings.showErrorMessage($('#previewMaxHeight'), mapI18nMPF.errorFieldRequired);
+                    isValid = false;
+                } else {
+                    if (!/^\d+$/.test($('#previewMaxHeight').val())) {
+                        managePreviewSettings.showErrorMessage($('#previewMaxHeight'), mapI18nMPF.errorNumberOnly);
+                        isValid = false;
+                    }
+                }
+
+                if (isValid) {
+                    $('#modalPreviewSettings').modal('hide');
+                    managePreviewSettings.add();
+                    managePreviewSettings.clearForm();
+                    managePreviewSettings.clearErrorMessage();
+                } else {
+                    return isValid;
                 }
             }
-
-            previewSettings.push({name: $('#previewName').val(),type: $('#previewType').val(),maxWidth: $('#previewMaxWidth').val(),maxHeight: $('#previewMaxHeight').val()});
-
-            console.log(previewSettings);
-
-            console.log(JSON.stringify(previewSettings));
-            $('#previewSettings').val(JSON.stringify(previewSettings));
-            console.log($('#previewSettings').val());
-
-            $('#previewType').val('');
-            $('#previewName').val('');
-            $('#previewMaxWidth').val('');
-            $('#previewMaxHeight').val('');
-        }
-
-        function updatePreviewSettingsTable() {
-            $('#previewSettingsBodyTable').html('');
-            if (previewSettings.length == 0) {
-                $('#emptyPreviewSettingsMessage').show();
-            } else {
-                for (var i in previewSettings) {
-                    $('#previewSettingsBodyTable').append('<tr><td>' + previewSettings[i].type + '</td><td>' + previewSettings[i].name + '</td><td>' + previewSettings[i].maxWidth + '</td><td>' + previewSettings[i].maxHeight + '</td><td><button type="button" onclick="previewSettings.splice('+i+'+1, -1)">Remove</button></td></tr>');
-                }
-            }
-        }
+        };
 
         $(document).ready(function() {
-            if ($('#previewSettings').val() != '') {
-                $('#emptyPreviewSettingsMessage').hide();
-                console.log(JSON.parse($('#previewSettings').val()));
-                previewSettings = JSON.parse($('#previewSettings').val());
-            }
+            managePreviewSettings.init();
 
             if ($('#fileLimit').val() == '') {
                 $('#fileLimit').val('-1');
@@ -175,7 +334,7 @@
             <div class="control-group <c:if test='${fn:contains(messagesSource, "usePreview")}'> error</c:if>">
                 <div class="controls">
                     <form:label path="usePreview" cssClass="checkbox">
-                        <form:checkbox path="usePreview" onchange="$('#previewBuilder').toggle();"/>
+                        <form:checkbox path="usePreview" onchange="managePreviewSettings.togglePanel();"/>
                         <fmt:message key="elvisnt_mountPoint.usePreview"/> <span style="color: red">*</span>
                     </form:label>
                     <c:if test="${fn:contains(messagesSource, 'usePreview')}">
@@ -188,56 +347,35 @@
                 <div id="previewBuilder" style="display: none;border-color: #999;background-color: #fbfbfb;color: #000;" class="alert">
 
                     <div class="alert alert-info">
-                        <p>If you do not add a preview setting for each type we will use default preview settings from elvis to generate previews.</p>
-                        <p><em>default image preview: 1600x1600 (width, height)</em></p>
-                        <p><em>default video preview: 480x360 (width, height)</em></p>
+                        <p><fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.info.previewSettings1"/></p>
+                        <p><em><fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.info.previewSettings2"/></em></p>
+                        <p><em><fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.info.previewSettings3"/></em></p>
                     </div>
 
                     <table class="table table-bordered table-hover table-striped">
                         <thead>
                             <tr>
                                 <th>
-                                    Type
+                                    <fmt:message key="elvis.label.type"/>
                                 </th>
                                 <th>
-                                    Preview name
+                                    <fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.label.previewName"/>
                                 </th>
                                 <th>
-                                    Max width
+                                    <fmt:message key="elvis.label.options"/>
                                 </th>
                                 <th>
-                                    Max height
-                                </th>
-                                <th>
-                                    Actions
+                                    <fmt:message key="elvis.label.actions"/>
                                 </th>
                             </tr>
                         </thead>
                         <tbody id="previewSettingsBodyTable"></tbody>
                     </table>
-                    <p id="emptyPreviewSettingsMessage" class="text-center"><em>Not preview settings saved yet!</em></p>
-                    <div class="form-inline">
-                        <fieldset>
-                            <legend>Add a preview settings</legend>
-                            <p>You can set multiple preview formats for each type. But Preview name must be unique by type and and all fields are required.</p>
-
-                            <select id="previewType">
-                                <option value="">Select type...</option>
-                                <option value="video">Video</option>
-                                <option value="image">Image</option>
-                            </select>
-
-                            <input id="previewName" type="text" placeholder="Preview name">
-
-                            <input id="previewMaxWidth" type="number" class="input-small" placeholder="Max width">
-
-                            <input id="previewMaxHeight" type="number" class="input-small" placeholder="Max height">
-
-                            <button type="button" class="btn btn-primary" style="margin-bottom: 0" onclick="addPreviewSettings()">
-                                Add
-                            </button>
-                            <p id="fieldsErrorMessage" class="text-error" style="display: none;"></p>
-                        </fieldset>
+                    <p id="emptyPreviewSettingsMessage" class="text-center"><em><fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.table.noPreviewSettings"/></em></p>
+                    <div class="row-fluid">
+                        <button class="btn btn-primary pull-right" type="button" data-toggle="modal" data-target="#modalPreviewSettings">
+                            <fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.title.addPreviewSettings"/>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -255,5 +393,78 @@
                 </button>
             </div>
         </form:form>
+    </div>
+</div>
+
+<div id="modalPreviewSettings" class="modal hide fade" role="dialog" aria-labelledby="addPreviewSetting" aria-hidden="true">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h3 id="addPreviewSetting"><fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.title.addPreviewSettings"/></h3>
+    </div>
+    <div class="modal-body">
+        <div class="alert alert-info"><fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.info.addPreviewSettings"/></div>
+
+        <form class="form-horizontal" novalidate>
+            <div class="control-group">
+                <label class="control-label"><fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.label.previewType"/></label>
+                <div class="controls">
+                    <select id="previewType" onchange="managePreviewSettings.updateForm()">
+                        <option value=""><fmt:message key="elvis.label.select"/></option>
+                        <option value="video"><fmt:message key="elvis.label.video"/></option>
+                        <option value="image"><fmt:message key="elvis.label.image"/></option>
+                    </select>
+                    <span class="help-block previewError hide"></span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label"><fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.label.previewName"/></label>
+                <div class="controls">
+                    <input id="previewName" type="text">
+                    <span class="help-block previewError hide"></span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label"><fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.label.maxWidth"/></label>
+                <div class="controls">
+                    <input id="previewMaxWidth" type="number">
+                    <span class="help-block previewError hide"></span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label"><fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.label.maxHeight"/></label>
+                <div class="controls">
+                    <input id="previewMaxHeight" type="number">
+                    <span class="help-block previewError hide"></span>
+                </div>
+            </div>
+
+            <div class="control-group hide">
+                <label class="control-label"><fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.label.ppiDpi"/></label>
+                <div class="controls">
+                    <input id="previewPpi" type="number">
+                    <span class="help-block previewError hide"></span>
+                </div>
+            </div>
+
+            <div class="control-group hide">
+                <label class="control-label"><fmt:message key="elvisnt_pointFactoryForm.managePreviewSettings.label.extension"/></label>
+                <div class="controls">
+                    <select id="previewExtension"></select>
+                    <span class="help-block previewError hide"></span>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn" data-dismiss="modal" aria-hidden="true"
+                onclick="managePreviewSettings.clearForm();managePreviewSettings.clearErrorMessage();">
+            <fmt:message key="elvis.label.cancel"/>
+        </button>
+        <button type="button" class="btn btn-primary" onclick="managePreviewSettings.validateForm();">
+            <fmt:message key="elvis.label.add"/>
+        </button>
     </div>
 </div>
