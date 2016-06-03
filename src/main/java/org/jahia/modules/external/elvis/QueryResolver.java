@@ -45,13 +45,11 @@ public class QueryResolver {
     private final StringBuffer TRUE = new StringBuffer("true");
     private final StringBuffer FALSE = new StringBuffer("false");
 
-    ElvisDataSource dataSource;
-    ExternalQuery query;
-    ElvisConfiguration configuration;
-    List<ElvisTypeMapping> elvisTypesMapping;
+    private ExternalQuery query;
+    private ElvisConfiguration configuration;
+    private List<ElvisTypeMapping> elvisTypesMapping;
 
     public QueryResolver(ElvisDataSource dataSource, ExternalQuery query) {
-        this.dataSource = dataSource;
         this.query = query;
         this.configuration = dataSource.configuration;
     }

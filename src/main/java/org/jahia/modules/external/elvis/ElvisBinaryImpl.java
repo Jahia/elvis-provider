@@ -45,15 +45,17 @@ import java.io.InputStream;
 public class ElvisBinaryImpl implements Binary {
     private static final Logger logger = LoggerFactory.getLogger(ElvisBinaryImpl.class);
 
-    String url;
-    long fileSize;
-    byte[] currentBinaryContent;
-    ElvisSession elvisSession;
+    private String url;
+    private long fileSize;
+    private byte[] currentBinaryContent;
+    private ElvisSession elvisSession;
+    private boolean calculFileSize;
 
-    public ElvisBinaryImpl(String url, long fileSize, ElvisSession elvisSession) {
+    ElvisBinaryImpl(String url, long fileSize, ElvisSession elvisSession, boolean calculFileSize) {
         this.url = url;
         this.fileSize = fileSize;
         this.elvisSession = elvisSession;
+        this.calculFileSize = calculFileSize;
     }
 
     @Override
@@ -102,6 +104,13 @@ public class ElvisBinaryImpl implements Binary {
 
     @Override
     public long getSize() throws RepositoryException {
-        return fileSize;
+        if (calculFileSize) {
+            if (currentBinaryContent == null) {
+                getStream();
+            }
+            return currentBinaryContent.length;
+        } else {
+            return fileSize;
+        }
     }
 }

@@ -83,7 +83,9 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
         dataSource.setElvisSession(new ElvisSession(mountPoint.getPropertyAsString(MountPointFactory.URL),
                                                     mountPoint.getPropertyAsString(MountPointFactory.USER_NAME),
                                                     mountPoint.getPropertyAsString(MountPointFactory.PASSWORD),
-                                                    mountPoint.getPropertyAsString(MountPointFactory.FILE_LIMIT)));
+                                                    mountPoint.getPropertyAsString(MountPointFactory.FILE_LIMIT),
+                                                    mountPoint.getProperty(MountPointFactory.USE_PREVIEW).getBoolean(),
+                                                    mountPoint.getPropertyAsString(MountPointFactory.PREVIEW_SETTINGS)));
         // Start the datasource
         dataSource.start();
         // Finalize the provider setup with datasource and some JCR parameters
@@ -91,7 +93,6 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
         externalContentStoreProvider.setDynamicallyMounted(true);
         externalContentStoreProvider.setSessionFactory(JCRSessionFactory.getInstance());
         externalContentStoreProvider.setReservedNodes(reservedNodes);
-
         try {
             externalContentStoreProvider.start();
         } catch (JahiaInitializationException e) {

@@ -1,4 +1,5 @@
 <elvisnt = 'http://www.jahia.org/jahia/elvisnt/1.0'>
+<elvismix = 'http://www.jahia.org/jahia/elvismix/1.0'>
 <jmix = 'http://www.jahia.org/jahia/mix/1.0'>
 <jnt = 'http://www.jahia.org/jahia/nt/1.0'>
 <mix = 'http://www.jcp.org/jcr/mix/1.0'>
@@ -15,3 +16,6 @@
  - usePreview (boolean) mandatory indexed=no noqueryorder nofulltext
  - previewSettings (string) mandatory indexed=no noqueryorder nofulltext
 
+[elvismix:previewFile] mixin
+ - previewUrl (string) indexed=no noqueryorder nofulltext
+ - thumbnailUrl (string) indexed=no noqueryorder nofulltext
