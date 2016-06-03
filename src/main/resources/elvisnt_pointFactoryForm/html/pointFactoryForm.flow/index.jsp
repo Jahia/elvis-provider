@@ -180,7 +180,7 @@
                     }
 
                     if ($('#previewType').val() == 'image') {
-                        if (!/^\d+$/.test($('#previewPpi').val())) {
+                        if ($('#previewPpi').val() != '' && !/^\d+$/.test($('#previewPpi').val())) {
                             managePreviewSettings.showErrorMessage($('#previewPpi'), mapI18nMPF.errorNumberOnly);
                             isValid = false;
                         }
