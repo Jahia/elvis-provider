@@ -27,6 +27,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
 import org.jahia.api.Constants;
+import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.external.ExternalDataSource;
 import org.jahia.modules.external.ExternalQuery;
 import org.jahia.modules.external.elvis.communication.BaseElvisActionCallback;
@@ -49,7 +50,7 @@ import java.util.*;
  *
  * @author Damien GAILLARD
  */
-public class ElvisDataSource extends FilesDataSource implements ExternalDataSource.Searchable {
+public class ElvisDataSource extends FilesDataSource implements ExternalDataSource.Searchable/*, ExternalDataSource.AccessControllable, ExternalDataSource.Writable*/ {
     private static final Logger logger = LoggerFactory.getLogger(ElvisDataSource.class);
 
     protected ElvisConfiguration configuration;
@@ -325,6 +326,9 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 if (!elvisTypeMapping.getJcrName().equals("jnt:file")) {
                     mixins.add(elvisTypeMapping.getJcrName());
                 }
+                if (elMetadata.has("tags")) {
+                    mixins.add(Constants.JAHIAMIX_TAGGED);
+                }
             }
             if (!mixins.isEmpty()) {
                 externalFile.setMixin(mixins);
@@ -337,12 +341,21 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 String jcrName = propertyMapping.getJcrName();
                 if (elMetadata.has(elvisName) && !externalFile.getProperties().containsKey(jcrName)) {
                     // Property [jcr:created] and [jcr:modified] are set at the ExternalFile instantiation, the [jcr:mymeType] is need to be set as content type also and jcr:content is not exactly a property but is used as a property for the search
-                    if (!jcrName.equals(Constants.JCR_CREATED) && !jcrName.equals(Constants.JCR_LASTMODIFIED) && !jcrName.equals(Constants.JCR_MIMETYPE) && !jcrName.equals(Constants.JCR_CONTENT)) {
+                    if (!jcrName.equals(Constants.JCR_CREATED) && !jcrName.equals(Constants.JCR_LASTMODIFIED)
+                        && !jcrName.equals(Constants.JCR_MIMETYPE) && !jcrName.equals(Constants.JCR_CONTENT)
+                        && !jcrName.equals("j:tagList")) {
                         externalFile.getProperties().put(jcrName, new String[]{elMetadata.getString(elvisName)});
                     } else if (jcrName.equals(Constants.JCR_MIMETYPE)) {
                         String mimeType = elMetadata.getString(elvisName);
                         externalFile.getProperties().put(Constants.JCR_MIMETYPE, new String[] {mimeType});
                         externalFile.setContentType(mimeType);
+                    } else if (jcrName.equals("j:tagList")) {
+                        JSONArray tags = elMetadata.getJSONArray(elvisName);
+                        String[] tagList = new String[tags.length()];
+                        for (int i = 0; i < tags.length(); i++) {
+                            tagList[i] = tags.getString(i);
+                        }
+                        externalFile.getProperties().put("j:tagList", tagList);
                     }
                 }
             }

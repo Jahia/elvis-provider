@@ -19,6 +19,7 @@
 
                 <bean p:elvisName="assetModifier" p:jcrName="jcr:lastModifiedBy"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+
                 <bean p:elvisName="assetModified" p:jcrName="jcr:lastModified"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
 
@@ -26,6 +27,9 @@
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
 
                 <bean p:elvisName="textContent" p:jcrName="jcr:content"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+
+                <bean p:elvisName="tags" p:jcrName="j:tagList"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
             </list>
         </property>
