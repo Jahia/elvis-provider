@@ -61,6 +61,7 @@ public class MountPointFactory extends AbstractMountPointFactory {
     private String password;
     @NotEmpty
     private String fileLimit;
+
     private String previewSettings;
     private boolean usePreview;
 

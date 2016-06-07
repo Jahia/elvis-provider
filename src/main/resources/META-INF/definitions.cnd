@@ -14,7 +14,7 @@
  - password (string) mandatory indexed=no noqueryorder nofulltext
  - fileLimit (string) mandatory indexed=no noqueryorder nofulltext
  - usePreview (boolean) mandatory indexed=no noqueryorder nofulltext
- - previewSettings (string) mandatory indexed=no noqueryorder nofulltext
+ - previewSettings (string) indexed=no noqueryorder nofulltext
 
 [elvismix:previewFile] mixin
  - previewUrl (string) indexed=no noqueryorder nofulltext

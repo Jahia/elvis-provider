@@ -27,7 +27,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
 import org.jahia.api.Constants;
-import org.jahia.modules.external.ExternalData;
 import org.jahia.modules.external.ExternalDataSource;
 import org.jahia.modules.external.ExternalQuery;
 import org.jahia.modules.external.elvis.communication.BaseElvisActionCallback;
@@ -39,18 +38,19 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jcr.Binary;
-import javax.jcr.PathNotFoundException;
-import javax.jcr.RepositoryException;
+import javax.jcr.*;
 import java.io.*;
 import java.util.*;
+
+import static javax.jcr.security.Privilege.JCR_READ;
 
 /**
  * ExternalDataSource implementation for Elvis
  *
  * @author Damien GAILLARD
  */
-public class ElvisDataSource extends FilesDataSource implements ExternalDataSource.Searchable/*, ExternalDataSource.AccessControllable, ExternalDataSource.Writable*/ {
+public class ElvisDataSource extends FilesDataSource implements ExternalDataSource.Searchable, ExternalDataSource.AccessControllable {
+
     private static final Logger logger = LoggerFactory.getLogger(ElvisDataSource.class);
 
     protected ElvisConfiguration configuration;
@@ -132,7 +132,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                     files.add(createExternalFile(element));
                     JSONObject elMetadata = element.getJSONObject("metadata");
 
-                    String assetDomain = (elMetadata.has("assetDomain"))?elMetadata.getString("assetDomain"):"file";
+                    String assetDomain = (elMetadata.has("assetDomain")) ? elMetadata.getString("assetDomain") : "file";
                     if (elvisSession.usePreview() && (assetDomain.equals("image") || assetDomain.equals("video"))) {
                         addPreviewExternalFiles(files, element, elMetadata, assetDomain);
                     }
@@ -160,7 +160,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                         if (searchJsonArray.length() > 0) {
                             JSONObject element = searchJsonArray.getJSONObject(0);
                             JSONObject elMetadata = element.getJSONObject("metadata");
-                            long fileSize = elMetadata.has("fileSize")?elMetadata.getJSONObject("fileSize").getLong("value"):-1;
+                            long fileSize = elMetadata.has("fileSize") ? elMetadata.getJSONObject("fileSize").getLong("value") : -1;
                             return new ElvisBinaryImpl(element.getString("originalUrl"), fileSize, elvisSession, false);
                         }
                         throw new PathNotFoundException(path);
@@ -245,7 +245,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                     JSONObject elMetadata = element.getJSONObject("metadata");
 
                     if (elvisSession.usePreview()) {
-                        String assetDomain = (elMetadata.has("assetDomain"))?elMetadata.getString("assetDomain"):"file";
+                        String assetDomain = (elMetadata.has("assetDomain")) ? elMetadata.getString("assetDomain") : "file";
                         if (elvisSession.getPreviewSettings().containsKey(assetDomain)) {
                             if (!elvisSession.getPreviewSettings().get(assetDomain).isEmpty()) {
                                 for (Map<String, String> previewParameters : elvisSession.getPreviewSettings().get(assetDomain)) {
@@ -306,8 +306,8 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
         // Get Basic information to create ExternalFile object
         String elPath = elMetadata.getString("assetPath");
-        Date created = elMetadata.has("assetCreated")?new Date(elMetadata.getJSONObject("assetCreated").getLong("value")):null;
-        Date modified = elMetadata.has("assetModified")?new Date(elMetadata.getJSONObject("assetModified").getLong("value")):null;
+        Date created = elMetadata.has("assetCreated") ? new Date(elMetadata.getJSONObject("assetCreated").getLong("value")) : null;
+        Date modified = elMetadata.has("assetModified") ? new Date(elMetadata.getJSONObject("assetModified").getLong("value")) : null;
         ExternalFile externalFile = new ExternalFile(ExternalFile.FileType.FILE, elPath, created, modified);
 
         // Set boolean to know if we need to get the thumbnail or not
@@ -316,7 +316,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         }
 
         // If possible use assetDomain value to map data but verify if we have mapping for current value if not use default file
-        String fileType = (elMetadata.has("assetDomain"))?elMetadata.getString("assetDomain"):"file";
+        String fileType = (elMetadata.has("assetDomain")) ? elMetadata.getString("assetDomain") : "file";
         List<ElvisTypeMapping> elvisTypesMapping = configuration.getTypeByElvisName(fileType);
 
         // If different than default type jnt:file getJcrName which should be the mixin e.g jmix:image
@@ -342,12 +342,12 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 if (elMetadata.has(elvisName) && !externalFile.getProperties().containsKey(jcrName)) {
                     // Property [jcr:created] and [jcr:modified] are set at the ExternalFile instantiation, the [jcr:mymeType] is need to be set as content type also and jcr:content is not exactly a property but is used as a property for the search
                     if (!jcrName.equals(Constants.JCR_CREATED) && !jcrName.equals(Constants.JCR_LASTMODIFIED)
-                        && !jcrName.equals(Constants.JCR_MIMETYPE) && !jcrName.equals(Constants.JCR_CONTENT)
-                        && !jcrName.equals("j:tagList")) {
+                            && !jcrName.equals(Constants.JCR_MIMETYPE) && !jcrName.equals(Constants.JCR_CONTENT)
+                            && !jcrName.equals("j:tagList")) {
                         externalFile.getProperties().put(jcrName, new String[]{elMetadata.getString(elvisName)});
                     } else if (jcrName.equals(Constants.JCR_MIMETYPE)) {
                         String mimeType = elMetadata.getString(elvisName);
-                        externalFile.getProperties().put(Constants.JCR_MIMETYPE, new String[] {mimeType});
+                        externalFile.getProperties().put(Constants.JCR_MIMETYPE, new String[]{mimeType});
                         externalFile.setContentType(mimeType);
                     } else if (jcrName.equals("j:tagList")) {
                         JSONArray tags = elMetadata.getJSONArray(elvisName);
@@ -397,7 +397,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                             }
                         }
 
-                        return createPreviewExternalFile(element, elMetadata, path, assetDomain, previewUrl, isDefaultElvisPreview, (isDefaultElvisPreview)?null:previewParameters);
+                        return createPreviewExternalFile(element, elMetadata, path, assetDomain, previewUrl, isDefaultElvisPreview, (isDefaultElvisPreview) ? null : previewParameters);
                     }
                     throw new PathNotFoundException("Error when trying to get preview file, path was: " + pathToUse);
                 }
@@ -410,9 +410,9 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         }
     }
 
-    private ExternalFile createPreviewExternalFile(JSONObject element, JSONObject elMetadata, String elPath, String assetDomain, String previewUrl, boolean isDefaultElvisPreview, Map<String, String> previewParameters) throws JSONException{
-        Date created = elMetadata.has("assetCreated")?new Date(elMetadata.getJSONObject("assetCreated").getLong("value")):null;
-        Date modified = elMetadata.has("assetModified")?new Date(elMetadata.getJSONObject("assetModified").getLong("value")):null;
+    private ExternalFile createPreviewExternalFile(JSONObject element, JSONObject elMetadata, String elPath, String assetDomain, String previewUrl, boolean isDefaultElvisPreview, Map<String, String> previewParameters) throws JSONException {
+        Date created = elMetadata.has("assetCreated") ? new Date(elMetadata.getJSONObject("assetCreated").getLong("value")) : null;
+        Date modified = elMetadata.has("assetModified") ? new Date(elMetadata.getJSONObject("assetModified").getLong("value")) : null;
         ExternalFile previewFile = new ExternalFile(ExternalFile.FileType.FILE, elPath, modified, created);
 
         List<String> mixins = new ArrayList<>();
@@ -421,28 +421,28 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
             mixins.add(Constants.JAHIAMIX_IMAGE);
             if (isDefaultElvisPreview) {
                 previewFile.setContentType("image/jpeg");
-                previewFile.getProperties().put("j:width", new String[] {"1600"});
-                previewFile.getProperties().put("j:height", new String[] {"1600"});
+                previewFile.getProperties().put("j:width", new String[]{"1600"});
+                previewFile.getProperties().put("j:height", new String[]{"1600"});
             } else {
-                previewFile.setContentType("image/" + (previewParameters.get("extension").equals("jpg")?"jpeg":previewParameters.get("extension")));
+                previewFile.setContentType("image/" + (previewParameters.get("extension").equals("jpg") ? "jpeg" : previewParameters.get("extension")));
                 elvisSession.getPreviewSettings().get("image");
-                previewFile.getProperties().put("j:width", new String[] {previewParameters.get("maxWidth")});
-                previewFile.getProperties().put("j:height", new String[] {previewParameters.get("maxHeight")});
+                previewFile.getProperties().put("j:width", new String[]{previewParameters.get("maxWidth")});
+                previewFile.getProperties().put("j:height", new String[]{previewParameters.get("maxHeight")});
             }
         } else {
             if (isDefaultElvisPreview) {
                 previewFile.setContentType("video/mp4");
             } else {
-                previewFile.setContentType("video/" + (previewParameters.get("extension").equals("flv")?"x-flv":previewParameters.get("extension")));
+                previewFile.setContentType("video/" + (previewParameters.get("extension").equals("flv") ? "x-flv" : previewParameters.get("extension")));
             }
         }
         previewFile.setMixin(mixins);
-        previewFile.getProperties().put("previewUrl", new String[] {previewUrl});
+        previewFile.getProperties().put("previewUrl", new String[]{previewUrl});
 
         // Set boolean to know if we need to get the thumbnail or not
         if (element.has("thumbnailUrl")) {
             previewFile.setHasThumbnail(true);
-            previewFile.getProperties().put("thumbnailUrl", new String[] {element.getString("thumbnailUrl")});
+            previewFile.getProperties().put("thumbnailUrl", new String[]{element.getString("thumbnailUrl")});
         }
 
         return previewFile;
@@ -493,5 +493,15 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                     EPF_FORMAT + previewParameters.get("name") + "_" + elMetadata.getString("extension") +
                     "." + previewParameters.get("extension");
         }
+    }
+
+    @Override
+    public String[] getPrivilegesNames(String username, String path) {
+        Set<String> privileges = new HashSet<>();
+
+        privileges.add(JCR_READ + "_" + Constants.EDIT_WORKSPACE);
+        privileges.add(JCR_READ + "_" + Constants.LIVE_WORKSPACE);
+
+        return privileges.toArray(new String[privileges.size()]);
     }
 }
