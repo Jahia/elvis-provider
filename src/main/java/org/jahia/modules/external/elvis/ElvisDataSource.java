@@ -61,6 +61,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     @Override
     public ExternalFile getExternalFile(String path) throws PathNotFoundException {
+        path = encodeDecodeSpecialCharacters(path, false);
         if (path.equals("/")) {
             return new ExternalFile(ExternalFile.FileType.FOLDER, path, null, null);
         } else {
@@ -86,7 +87,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                             for (int i = 0; i < jsonArray.length(); i++) {
                                 JSONObject element = jsonArray.getJSONObject(i);
                                 if (element.getString("assetPath").equals(pathToUse)) {
-                                    return new ExternalFile(ExternalFile.FileType.FOLDER, pathToUse, null, null);
+                                    return new ExternalFile(ExternalFile.FileType.FOLDER, encodeDecodeSpecialCharacters(pathToUse, true), null, null);
                                 }
                             }
                         }
@@ -104,6 +105,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     @Override
     public List<ExternalFile> getChildrenFiles(String path) throws RepositoryException {
+        path = encodeDecodeSpecialCharacters(path, false);
         List<ExternalFile> childrenList = new ArrayList<>();
         final String pathToUse = path;
         List<ExternalFile> externalFolders = elvisSession.execute(new BaseElvisActionCallback<List<ExternalFile>>(elvisSession) {
@@ -114,7 +116,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 JSONArray jsonArray = getBrowseResponse(browseResponse);
                 for (int i = 0; i < jsonArray.length(); i++) {
                     JSONObject element = jsonArray.getJSONObject(i);
-                    folders.add(new ExternalFile(ExternalFile.FileType.FOLDER, element.getString("assetPath"), null, null));
+                    folders.add(new ExternalFile(ExternalFile.FileType.FOLDER, encodeDecodeSpecialCharacters(element.getString("assetPath"), true), null, null));
                 }
                 return folders;
             }
@@ -150,7 +152,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         if (file.getMixin() != null && file.getMixin().contains(ELVISMIX_PREVIEW_FILE)) {
             return new ElvisBinaryImpl(file.getProperties().get("previewUrl")[0], -1, elvisSession, true);
         } else {
-            final String path = file.getPath();
+            final String path = encodeDecodeSpecialCharacters(file.getPath(), false);
             try {
                 return elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
                     @Override
@@ -180,7 +182,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         if (file.getMixin() != null && file.getMixin().contains(ELVISMIX_PREVIEW_FILE)) {
             return new ElvisBinaryImpl(file.getProperties().get("thumbnailUrl")[0], -1, elvisSession, false);
         } else {
-            final String path = file.getPath();
+            final String path = encodeDecodeSpecialCharacters(file.getPath(), false);
             try {
                 return elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
                     @Override
@@ -308,7 +310,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         String elPath = elMetadata.getString("assetPath");
         Date created = elMetadata.has("assetCreated") ? new Date(elMetadata.getJSONObject("assetCreated").getLong("value")) : null;
         Date modified = elMetadata.has("assetModified") ? new Date(elMetadata.getJSONObject("assetModified").getLong("value")) : null;
-        ExternalFile externalFile = new ExternalFile(ExternalFile.FileType.FILE, elPath, created, modified);
+        ExternalFile externalFile = new ExternalFile(ExternalFile.FileType.FILE, encodeDecodeSpecialCharacters(elPath, true), created, modified);
 
         // Set boolean to know if we need to get the thumbnail or not
         if (element.has("thumbnailUrl")) {
@@ -413,7 +415,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     private ExternalFile createPreviewExternalFile(JSONObject element, JSONObject elMetadata, String elPath, String assetDomain, String previewUrl, boolean isDefaultElvisPreview, Map<String, String> previewParameters) throws JSONException {
         Date created = elMetadata.has("assetCreated") ? new Date(elMetadata.getJSONObject("assetCreated").getLong("value")) : null;
         Date modified = elMetadata.has("assetModified") ? new Date(elMetadata.getJSONObject("assetModified").getLong("value")) : null;
-        ExternalFile previewFile = new ExternalFile(ExternalFile.FileType.FILE, elPath, modified, created);
+        ExternalFile previewFile = new ExternalFile(ExternalFile.FileType.FILE, encodeDecodeSpecialCharacters(elPath, true), modified, created);
 
         List<String> mixins = new ArrayList<>();
         mixins.add(ELVISMIX_PREVIEW_FILE);
@@ -492,6 +494,20 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                     StringUtils.substringBeforeLast(elMetadata.getString("filename"), ".") +
                     EPF_FORMAT + previewParameters.get("name") + "_" + elMetadata.getString("extension") +
                     "." + previewParameters.get("extension");
+        }
+    }
+
+    /**
+     * To encode and decode characters not allowed by DXM and allowed by Elvis
+     * @param path      : path to encode/decode
+     * @param encode  : true if you want to encode
+     * @return encoded/decoded path
+     */
+    private String encodeDecodeSpecialCharacters(String path, boolean encode) {
+        if (encode) {
+            return StringUtils.replaceEachRepeatedly(path, new String[]{"[","]"}, new String[]{"%5B","%5D"});
+        } else {
+            return StringUtils.replaceEachRepeatedly(path, new String[]{"%5B","%5D"}, new String[]{"[","]"});
         }
     }
 
