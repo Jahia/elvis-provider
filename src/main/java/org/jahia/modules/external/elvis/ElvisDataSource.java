@@ -500,14 +500,14 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     /**
      * To encode and decode characters not allowed by DXM and allowed by Elvis
      * @param path      : path to encode/decode
-     * @param encode  : true if you want to encode
+     * @param encode    : true if you want to encode
      * @return encoded/decoded path
      */
     private String encodeDecodeSpecialCharacters(String path, boolean encode) {
         if (encode) {
-            return StringUtils.replaceEachRepeatedly(path, new String[]{"[","]"}, new String[]{"%5B","%5D"});
+            return (path!=null)?StringUtils.replaceEachRepeatedly(path.replace("%", "%25"), new String[]{"[","]"}, new String[]{"%5B","%5D"}):null;
         } else {
-            return StringUtils.replaceEachRepeatedly(path, new String[]{"%5B","%5D"}, new String[]{"[","]"});
+            return (path!=null && path.contains("%"))?StringUtils.replaceEachRepeatedly(path, new String[]{"%5B","%5D"}, new String[]{"[","]"}).replace("%25", "%"):path;
         }
     }
 
