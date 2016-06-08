@@ -11,7 +11,7 @@
 [elvisnt:mountPoint] > jnt:mountPoint
  - url (string) mandatory indexed=no nofulltext
  - userName (string) mandatory indexed=no nofulltext
- - password (string) mandatory indexed=no noqueryorder nofulltext
+ - password (string) mandatory indexed=no noqueryorder nofulltext hidden
  - fileLimit (string) mandatory indexed=no noqueryorder nofulltext
  - usePreview (boolean) mandatory indexed=no noqueryorder nofulltext
  - previewSettings (string) indexed=no noqueryorder nofulltext

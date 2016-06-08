@@ -84,4 +84,12 @@
             </list>
         </property>
     </bean>
+
+    <bean class="org.jahia.services.content.decorator.JCRNodeDecoratorDefinition">
+        <property name="decorators">
+            <map>
+                <entry key="elvisnt:mountPoint" value="org.jahia.modules.external.elvis.decorator.ElvisMountPointNode"/>
+            </map>
+        </property>
+    </bean>
 </beans>
