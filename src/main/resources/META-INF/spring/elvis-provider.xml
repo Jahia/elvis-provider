@@ -14,13 +14,11 @@
 
                 <bean p:elvisName="assetCreator" p:jcrName="jcr:createdBy"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
-
                 <bean p:elvisName="assetCreated" p:jcrName="jcr:created"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
 
                 <bean p:elvisName="assetModifier" p:jcrName="jcr:lastModifiedBy"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
-
                 <bean p:elvisName="assetModified" p:jcrName="jcr:lastModified"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
 

@@ -49,13 +49,11 @@ public class ElvisBinaryImpl implements Binary {
     private long fileSize;
     private byte[] currentBinaryContent;
     private ElvisSession elvisSession;
-    private boolean calculFileSize;
 
-    ElvisBinaryImpl(String url, long fileSize, ElvisSession elvisSession, boolean calculFileSize) {
+    ElvisBinaryImpl(String url, long fileSize, ElvisSession elvisSession) {
         this.url = url;
         this.fileSize = fileSize;
         this.elvisSession = elvisSession;
-        this.calculFileSize = calculFileSize;
     }
 
     @Override
@@ -64,6 +62,7 @@ public class ElvisBinaryImpl implements Binary {
             return new ByteArrayInputStream(currentBinaryContent);
         }
         if (StringUtils.isNotBlank(this.url) && this.elvisSession != null) {
+            logger.info("ON VA CALL LE FICHIER : " + this.url);
             final String urlToUse = this.url;
             return elvisSession.execute(new BaseElvisActionCallback<ByteArrayInputStream>(elvisSession) {
                 @Override
@@ -78,6 +77,11 @@ public class ElvisBinaryImpl implements Binary {
                         }
                         currentBinaryContent = new byte[0];
                     }
+
+                    if (fileSize == -1 || fileSize == 0) {
+                        fileSize = currentBinaryContent.length;
+                    }
+
                     return new ByteArrayInputStream(currentBinaryContent);
                 }
             });
@@ -104,13 +108,10 @@ public class ElvisBinaryImpl implements Binary {
 
     @Override
     public long getSize() throws RepositoryException {
-        if (calculFileSize) {
-            if (currentBinaryContent == null) {
-                getStream();
-            }
-            return currentBinaryContent.length;
-        } else {
-            return fileSize;
+        logger.info("ON A BESOIN DE LA SIZE : " + this.url);
+        if (currentBinaryContent != null && (fileSize == -1 || fileSize == 0)) {
+            fileSize = currentBinaryContent.length;
         }
+        return fileSize;
     }
 }

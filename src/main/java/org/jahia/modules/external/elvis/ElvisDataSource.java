@@ -56,6 +56,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     protected ElvisConfiguration configuration;
     private ElvisSession elvisSession;
 
+    private static String ELVISMIX_FILE = "elvismix:file";
     private static String ELVISMIX_PREVIEW_FILE = "elvismix:previewFile";
     private static String EPF_FORMAT = "_EPF-FORMAT_";
 
@@ -111,7 +112,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         List<ExternalFile> externalFolders = elvisSession.execute(new BaseElvisActionCallback<List<ExternalFile>>(elvisSession) {
             @Override
             public List<ExternalFile> doInElvis() throws Exception {
-                List<ExternalFile> folders = new ArrayList<ExternalFile>();
+                List<ExternalFile> folders = new ArrayList<>();
                 CloseableHttpResponse browseResponse = elvisSession.getDataFromApi("/browse?path=" + WebUtils.escapePath(pathToUse));
                 JSONArray jsonArray = getBrowseResponse(browseResponse);
                 for (int i = 0; i < jsonArray.length(); i++) {
@@ -126,7 +127,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         List<ExternalFile> externalFiles = elvisSession.execute(new BaseElvisActionCallback<List<ExternalFile>>(elvisSession) {
             @Override
             public List<ExternalFile> doInElvis() throws Exception {
-                List<ExternalFile> files = new ArrayList<ExternalFile>();
+                List<ExternalFile> files = new ArrayList<>();
                 CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=folderPath:" + WebUtils.escapePath("\"" + pathToUse + "\"") + "&num=" + elvisSession.getFileLimit());
                 JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
                 for (int i = 0; i < searchJsonArray.length(); i++) {
@@ -149,62 +150,12 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     @Override
     public Binary getFileBinary(ExternalFile file) throws PathNotFoundException {
-        if (file.getMixin() != null && file.getMixin().contains(ELVISMIX_PREVIEW_FILE)) {
-            return new ElvisBinaryImpl(file.getProperties().get("previewUrl")[0], -1, elvisSession, true);
-        } else {
-            final String path = encodeDecodeSpecialCharacters(file.getPath(), false);
-            try {
-                return elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
-                    @Override
-                    public ElvisBinaryImpl doInElvis() throws Exception {
-                        CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
-                        JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
-                        if (searchJsonArray.length() > 0) {
-                            JSONObject element = searchJsonArray.getJSONObject(0);
-                            JSONObject elMetadata = element.getJSONObject("metadata");
-                            long fileSize = elMetadata.has("fileSize") ? elMetadata.getJSONObject("fileSize").getLong("value") : -1;
-                            return new ElvisBinaryImpl(element.getString("originalUrl"), fileSize, elvisSession, false);
-                        }
-                        throw new PathNotFoundException(path);
-                    }
-                });
-            } catch (PathNotFoundException e) {
-                throw e;
-            } catch (RepositoryException e) {
-                logger.error(e.getMessage(), e);
-                throw new RuntimeException(e);
-            }
-        }
+        return new ElvisBinaryImpl(file.getProperties().get("downloadUrl")[0], Long.valueOf(file.getProperties().get("fileSize")[0]), elvisSession);
     }
 
     @Override
     public Binary getThumbnailBinary(ExternalFile file) throws PathNotFoundException {
-        if (file.getMixin() != null && file.getMixin().contains(ELVISMIX_PREVIEW_FILE)) {
-            return new ElvisBinaryImpl(file.getProperties().get("thumbnailUrl")[0], -1, elvisSession, false);
-        } else {
-            final String path = encodeDecodeSpecialCharacters(file.getPath(), false);
-            try {
-                return elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
-                    @Override
-                    public ElvisBinaryImpl doInElvis() throws Exception {
-                        CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
-                        JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
-                        if (searchJsonArray.length() > 0) {
-                            JSONObject element = searchJsonArray.getJSONObject(0);
-                            if (element.has("thumbnailUrl")) {
-                                return new ElvisBinaryImpl(element.getString("thumbnailUrl"), -1, elvisSession, false);
-                            }
-                        }
-                        throw new PathNotFoundException(path + "/thumbnail");
-                    }
-                });
-            } catch (PathNotFoundException e) {
-                throw e;
-            } catch (RepositoryException e) {
-                logger.error(e.getMessage(), e);
-                throw new RuntimeException(e);
-            }
-        }
+        return new ElvisBinaryImpl(file.getProperties().get("thumbnailUrl")[0], Long.valueOf(file.getProperties().get("fileSize")[0]), elvisSession);
     }
 
     @Override
@@ -313,8 +264,10 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         ExternalFile externalFile = new ExternalFile(ExternalFile.FileType.FILE, encodeDecodeSpecialCharacters(elPath, true), created, modified);
 
         // Set boolean to know if we need to get the thumbnail or not
+        String thumbnailUrl = "";
         if (element.has("thumbnailUrl")) {
             externalFile.setHasThumbnail(true);
+            thumbnailUrl = element.getString("thumbnailUrl");
         }
 
         // If possible use assetDomain value to map data but verify if we have mapping for current value if not use default file
@@ -324,6 +277,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         // If different than default type jnt:file getJcrName which should be the mixin e.g jmix:image
         if (!fileType.equals("file")) {
             List<String> mixins = new ArrayList<>();
+            mixins.add(ELVISMIX_FILE);
             for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
                 if (!elvisTypeMapping.getJcrName().equals("jnt:file")) {
                     mixins.add(elvisTypeMapping.getJcrName());
@@ -336,6 +290,13 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 externalFile.setMixin(mixins);
             }
         }
+
+        String fileSize = elMetadata.has("fileSize") ? elMetadata.getJSONObject("fileSize").getString("value") : "-1";
+        String downloadUrl = element.getString("originalUrl");
+
+        externalFile.getProperties().put("downloadUrl", new String[]{downloadUrl});
+        externalFile.getProperties().put("thumbnailUrl", new String[]{thumbnailUrl});
+        externalFile.getProperties().put("fileSize", new String[]{fileSize});
 
         for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
             for (ElvisPropertyMapping propertyMapping : elvisTypeMapping.getProperties()) {
@@ -439,7 +400,8 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
             }
         }
         previewFile.setMixin(mixins);
-        previewFile.getProperties().put("previewUrl", new String[]{previewUrl});
+        previewFile.getProperties().put("downloadUrl", new String[]{previewUrl});
+        previewFile.getProperties().put("fileSize", new String[]{"0"});
 
         // Set boolean to know if we need to get the thumbnail or not
         if (element.has("thumbnailUrl")) {

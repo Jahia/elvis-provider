@@ -17,5 +17,8 @@
  - previewSettings (string) indexed=no noqueryorder nofulltext
 
 [elvismix:previewFile] mixin
- - previewUrl (string) indexed=no noqueryorder nofulltext
- - thumbnailUrl (string) indexed=no noqueryorder nofulltext
+
+[elvismix:file] mixin
+ - downloadUrl (string) indexed=no noqueryorder nofulltext hidden
+ - thumbnailUrl (string) indexed=no noqueryorder nofulltext hidden
+ - fileSize (string) indexed=no noqueryorder nofulltext hidden
