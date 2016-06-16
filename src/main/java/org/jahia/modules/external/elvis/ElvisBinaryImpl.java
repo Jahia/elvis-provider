@@ -77,7 +77,7 @@ public class ElvisBinaryImpl implements Binary {
                         currentBinaryContent = new byte[0];
                     }
 
-                    if (fileSize == -1 || fileSize == 0) {
+                    if (fileSize == -1) {
                         fileSize = currentBinaryContent.length;
                     }
 
@@ -107,7 +107,7 @@ public class ElvisBinaryImpl implements Binary {
 
     @Override
     public long getSize() throws RepositoryException {
-        if (currentBinaryContent != null && (fileSize == -1 || fileSize == 0)) {
+        if (currentBinaryContent != null && fileSize == -1) {
             fileSize = currentBinaryContent.length;
         }
         return fileSize;
