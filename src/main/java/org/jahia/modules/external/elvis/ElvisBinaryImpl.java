@@ -36,26 +36,28 @@ import javax.jcr.RepositoryException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 
 /**
  * Implementation binary properties to access Elvis document's content
  *
  * @author Damien GAILLARD
  */
-public class ElvisBinaryImpl implements Binary {
+public class ElvisBinaryImpl implements Binary, Serializable {
+    private static final long serialVersionUID = -3645647422153577695L;
     private static final Logger logger = LoggerFactory.getLogger(ElvisBinaryImpl.class);
 
     private String url;
     private long fileSize;
     private byte[] currentBinaryContent;
-    private ElvisSession elvisSession;
-    private boolean calculFileSize;
+    private transient ElvisSession elvisSession;
+    private boolean calculateFileSize;
 
-    ElvisBinaryImpl(String url, long fileSize, ElvisSession elvisSession, boolean calculFileSize) {
+    ElvisBinaryImpl(String url, long fileSize, ElvisSession elvisSession, boolean calculateFileSize) {
         this.url = url;
         this.fileSize = fileSize;
         this.elvisSession = elvisSession;
-        this.calculFileSize = calculFileSize;
+        this.calculateFileSize = calculateFileSize;
     }
 
     @Override
@@ -95,16 +97,11 @@ public class ElvisBinaryImpl implements Binary {
     }
 
     @Override
-    public void dispose() {
-        url = null;
-        fileSize = -1;
-        elvisSession = null;
-        currentBinaryContent = null;
-    }
+    public void dispose() {}
 
     @Override
     public long getSize() throws RepositoryException {
-        if (calculFileSize) {
+        if (calculateFileSize) {
             if (currentBinaryContent == null) {
                 getStream();
             }
@@ -112,5 +109,17 @@ public class ElvisBinaryImpl implements Binary {
         } else {
             return fileSize;
         }
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public long getFileSize() {
+        return fileSize;
+    }
+
+    public boolean isCalculateFileSize() {
+        return calculateFileSize;
     }
 }

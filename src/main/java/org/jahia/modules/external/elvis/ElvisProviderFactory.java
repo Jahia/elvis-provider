@@ -28,6 +28,7 @@ import org.jahia.modules.external.ExternalContentStoreProvider;
 import org.jahia.modules.external.elvis.admin.MountPointFactory;
 import org.jahia.modules.external.elvis.communication.ElvisSession;
 import org.jahia.services.SpringContextSingleton;
+import org.jahia.services.cache.ehcache.EhCacheProvider;
 import org.jahia.services.content.JCRNodeWrapper;
 import org.jahia.services.content.JCRSessionFactory;
 import org.jahia.services.content.JCRStoreProvider;
@@ -52,6 +53,7 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
 
     private ApplicationContext applicationContext;
     private List<String> reservedNodes;
+    private EhCacheProvider bigEhCacheProvider;
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
@@ -85,7 +87,8 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
                                                     mountPoint.getPropertyAsString(MountPointFactory.PASSWORD),
                                                     mountPoint.getPropertyAsString(MountPointFactory.FILE_LIMIT),
                                                     mountPoint.getProperty(MountPointFactory.USE_PREVIEW).getBoolean(),
-                                                    mountPoint.getPropertyAsString(MountPointFactory.PREVIEW_SETTINGS)));
+                                                    mountPoint.getPropertyAsString(MountPointFactory.PREVIEW_SETTINGS),
+                                                    mountPoint.getPath(), bigEhCacheProvider));
         // Start the datasource
         dataSource.start();
         // Finalize the provider setup with datasource and some JCR parameters
@@ -107,5 +110,9 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
 
     public void setReservedNodes(List<String> reservedNodes) {
         this.reservedNodes = reservedNodes;
+    }
+
+    public void setBigEhCacheProvider(EhCacheProvider bigEhCacheProvider) {
+        this.bigEhCacheProvider = bigEhCacheProvider;
     }
 }

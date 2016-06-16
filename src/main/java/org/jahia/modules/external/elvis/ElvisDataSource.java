@@ -29,6 +29,8 @@ import org.apache.http.util.EntityUtils;
 import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalDataSource;
 import org.jahia.modules.external.ExternalQuery;
+import org.jahia.modules.external.elvis.cache.ElvisFolderContentCacheEntry;
+import org.jahia.modules.external.elvis.cache.ElvisItemCacheEntry;
 import org.jahia.modules.external.elvis.communication.BaseElvisActionCallback;
 import org.jahia.modules.external.elvis.communication.ElvisSession;
 import org.jahia.utils.WebUtils;
@@ -62,18 +64,28 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     @Override
     public ExternalFile getExternalFile(String path) throws PathNotFoundException {
         path = encodeDecodeSpecialCharacters(path, false);
+        ElvisItemCacheEntry elvisItemCacheEntry = elvisSession.getElvisCacheManager().getItemCacheEntry(path);
+        if (elvisItemCacheEntry != null) {
+            return elvisItemCacheEntry.getAsExternalFile();
+        }
+
+        ExternalFile externalFile;
         if (path.equals("/")) {
-            return new ExternalFile(ExternalFile.FileType.FOLDER, path, null, null);
+            externalFile = new ExternalFile(ExternalFile.FileType.FOLDER, path, null, null);
+            elvisSession.getElvisCacheManager().cacheItem(new ElvisItemCacheEntry(externalFile));
+            return externalFile;
         } else {
             // It's a preview file
             if (path.contains(EPF_FORMAT)) {
-                return getPreviewExternalFile(path);
+                externalFile = getPreviewExternalFile(path);
+                elvisSession.getElvisCacheManager().cacheItem(new ElvisItemCacheEntry(externalFile));
+                return externalFile;
             }
 
             // It's not a preview file follow the normal pattern
             final String pathToUse = path;
             try {
-                return elvisSession.execute(new BaseElvisActionCallback<ExternalFile>(elvisSession) {
+                externalFile = elvisSession.execute(new BaseElvisActionCallback<ExternalFile>(elvisSession) {
                     @Override
                     public ExternalFile doInElvis() throws Exception {
                         CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + pathToUse + "\""));
@@ -94,6 +106,8 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                         throw new PathNotFoundException("The request was not correctly executed please check your Elvis API Server");
                     }
                 });
+                elvisSession.getElvisCacheManager().cacheItem(new ElvisItemCacheEntry(externalFile));
+                return externalFile;
             } catch (PathNotFoundException e) {
                 throw e;
             } catch (RepositoryException e) {
@@ -105,9 +119,19 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     @Override
     public List<ExternalFile> getChildrenFiles(String path) throws RepositoryException {
-        path = encodeDecodeSpecialCharacters(path, false);
+        final String pathToUse = encodeDecodeSpecialCharacters(path, false);
+
+        ElvisFolderContentCacheEntry elvisFolderContentCacheEntry = elvisSession.getElvisCacheManager().getFolderContentCacheEntry(pathToUse);
         List<ExternalFile> childrenList = new ArrayList<>();
-        final String pathToUse = path;
+
+        if (elvisFolderContentCacheEntry != null) {
+            childrenList.addAll(elvisFolderContentCacheEntry.getFoldersAsExternalFile());
+            childrenList.addAll(elvisFolderContentCacheEntry.getFilesAsExternalFile());
+            return childrenList;
+        }
+
+        elvisFolderContentCacheEntry = new ElvisFolderContentCacheEntry(pathToUse);
+
         List<ExternalFile> externalFolders = elvisSession.execute(new BaseElvisActionCallback<List<ExternalFile>>(elvisSession) {
             @Override
             public List<ExternalFile> doInElvis() throws Exception {
@@ -144,17 +168,38 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         });
         childrenList.addAll(externalFiles);
 
+        elvisFolderContentCacheEntry.setFoldersElvisItemCacheEntry(externalFolders);
+        elvisFolderContentCacheEntry.setFilesElvisItemCacheEntry(externalFiles);
+
+        elvisSession.getElvisCacheManager().cacheFolderContent(elvisFolderContentCacheEntry);
+
         return childrenList;
     }
 
     @Override
     public Binary getFileBinary(ExternalFile file) throws PathNotFoundException {
+        ElvisItemCacheEntry elvisItemCacheEntry = elvisSession.getElvisCacheManager().getItemCacheEntryByExternalFile(file);
+        boolean isNewCacheEntry = false;
+        if (elvisItemCacheEntry == null) {
+            isNewCacheEntry = true;
+            elvisItemCacheEntry = new ElvisItemCacheEntry(file);
+        } else if (elvisItemCacheEntry.getDownloadUrl() != null) {
+            return new ElvisBinaryImpl(elvisItemCacheEntry.getDownloadUrl(), elvisItemCacheEntry.getFileSize(), elvisSession, elvisItemCacheEntry.isCalculateFileSize());
+        }
+
         if (file.getMixin() != null && file.getMixin().contains(ELVISMIX_PREVIEW_FILE)) {
-            return new ElvisBinaryImpl(file.getProperties().get("previewUrl")[0], -1, elvisSession, true);
+            ElvisBinaryImpl elvisFileBinary = new ElvisBinaryImpl(file.getProperties().get("previewUrl")[0], -1, elvisSession, true);
+            elvisItemCacheEntry.setDownloadUrl(elvisFileBinary.getUrl());
+            elvisItemCacheEntry.setFileSize(elvisFileBinary.getFileSize());
+            elvisItemCacheEntry.setCalculateFileSize(elvisFileBinary.isCalculateFileSize());
+            if (isNewCacheEntry) {
+                elvisSession.getElvisCacheManager().cacheItem(elvisItemCacheEntry);
+            }
+            return elvisFileBinary;
         } else {
             final String path = encodeDecodeSpecialCharacters(file.getPath(), false);
             try {
-                return elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
+                ElvisBinaryImpl elvisFileBinary = elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
                     @Override
                     public ElvisBinaryImpl doInElvis() throws Exception {
                         CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
@@ -168,6 +213,14 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                         throw new PathNotFoundException(path);
                     }
                 });
+
+                elvisItemCacheEntry.setDownloadUrl(elvisFileBinary.getUrl());
+                elvisItemCacheEntry.setFileSize(elvisFileBinary.getFileSize());
+                elvisItemCacheEntry.setCalculateFileSize(elvisFileBinary.isCalculateFileSize());
+                if (isNewCacheEntry) {
+                    elvisSession.getElvisCacheManager().cacheItem(elvisItemCacheEntry);
+                }
+                return elvisFileBinary;
             } catch (PathNotFoundException e) {
                 throw e;
             } catch (RepositoryException e) {
@@ -179,12 +232,28 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     @Override
     public Binary getThumbnailBinary(ExternalFile file) throws PathNotFoundException {
+        ElvisItemCacheEntry elvisItemCacheEntry = elvisSession.getElvisCacheManager().getItemCacheEntryByExternalFile(file);
+        boolean isNewCacheEntry = false;
+        if (elvisItemCacheEntry == null) {
+            isNewCacheEntry = true;
+            elvisItemCacheEntry = new ElvisItemCacheEntry(file);
+        } else if (elvisItemCacheEntry.getThumbnailUrl() != null) {
+            return new ElvisBinaryImpl(elvisItemCacheEntry.getThumbnailUrl(), elvisItemCacheEntry.getFileSize(), elvisSession, elvisItemCacheEntry.isCalculateFileSize());
+        }
+
         if (file.getMixin() != null && file.getMixin().contains(ELVISMIX_PREVIEW_FILE)) {
-            return new ElvisBinaryImpl(file.getProperties().get("thumbnailUrl")[0], -1, elvisSession, false);
+            ElvisBinaryImpl elvisFileBinary = new ElvisBinaryImpl(file.getProperties().get("thumbnailUrl")[0], -1, elvisSession, false);
+            elvisItemCacheEntry.setThumbnailUrl(elvisFileBinary.getUrl());
+            elvisItemCacheEntry.setFileSize(elvisFileBinary.getFileSize());
+            elvisItemCacheEntry.setCalculateFileSize(elvisFileBinary.isCalculateFileSize());
+            if (isNewCacheEntry) {
+                elvisSession.getElvisCacheManager().cacheItem(elvisItemCacheEntry);
+            }
+            return elvisFileBinary;
         } else {
             final String path = encodeDecodeSpecialCharacters(file.getPath(), false);
             try {
-                return elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
+                ElvisBinaryImpl elvisFileBinary = elvisSession.execute(new BaseElvisActionCallback<ElvisBinaryImpl>(elvisSession) {
                     @Override
                     public ElvisBinaryImpl doInElvis() throws Exception {
                         CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + path + "\""));
@@ -198,6 +267,14 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                         throw new PathNotFoundException(path + "/thumbnail");
                     }
                 });
+
+                elvisItemCacheEntry.setThumbnailUrl(elvisFileBinary.getUrl());
+                elvisItemCacheEntry.setFileSize(elvisFileBinary.getFileSize());
+                elvisItemCacheEntry.setCalculateFileSize(elvisFileBinary.isCalculateFileSize());
+                if (isNewCacheEntry) {
+                    elvisSession.getElvisCacheManager().cacheItem(elvisItemCacheEntry);
+                }
+                return elvisFileBinary;
             } catch (PathNotFoundException e) {
                 throw e;
             } catch (RepositoryException e) {

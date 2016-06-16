@@ -32,9 +32,8 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import org.jahia.modules.external.elvis.cache.ElvisCacheManager;
+import org.jahia.services.cache.ehcache.EhCacheProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,9 +57,10 @@ public class ElvisSession {
     private Map<String, List<Map<String, String>>> previewSettings;
     private CloseableHttpClient httpClient;
     private HttpClientContext context;
+    private ElvisCacheManager elvisCacheManager;
 
     public ElvisSession(String baseUrl, String userName, String password, String fileLimit, boolean usePreview,
-                        String previewSettings) {
+                        String previewSettings, String nodePath, EhCacheProvider bigEhCacheProvider) {
         if (baseUrl.endsWith("/")) {
             baseUrl = StringUtils.substringBeforeLast(baseUrl, "/");
         }
@@ -70,6 +70,7 @@ public class ElvisSession {
         this.fileLimit = fileLimit;
         this.usePreview = usePreview;
         this.previewSettings = convertJSONtoMap(previewSettings);
+        this.elvisCacheManager = new ElvisCacheManager(nodePath, bigEhCacheProvider);
     }
 
     public <X> X execute(ElvisSessionCallback<X> callback) throws RepositoryException {
@@ -88,6 +89,7 @@ public class ElvisSession {
     }
 
     public void logout() {
+        elvisCacheManager.flushAll();
         try {
             getDataFromApi("/logout");
             httpClient.close();
@@ -96,7 +98,7 @@ public class ElvisSession {
         }
     }
 
-    void closeHttp() {
+    public void closeHttp() {
         try {
             httpClient.close();
         } catch (IOException e) {
@@ -137,6 +139,10 @@ public class ElvisSession {
 
     public String getBaseUrl() {
         return baseUrl;
+    }
+
+    public ElvisCacheManager getElvisCacheManager() {
+        return elvisCacheManager;
     }
 
     public boolean usePreview() {
