@@ -24,6 +24,7 @@
 package org.jahia.modules.external.elvis.communication;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -148,7 +149,9 @@ public class ElvisSession {
     }
 
     private CloseableHttpResponse connectToApi() throws IOException {
-        HttpGet get = new HttpGet(this.baseUrl + "/services/login?username=" + userName + "&password=" + password);
+        String stringToEncode = userName + ":" + password;
+        String encodedString = Base64.encodeBase64String(stringToEncode.getBytes());
+        HttpGet get = new HttpGet(this.baseUrl + "/services/login?cred=" + encodedString);
         get.setHeader("Accept", "Application/Json");
         return httpClient.execute(get, context);
     }
@@ -156,10 +159,12 @@ public class ElvisSession {
     private Map<String, List<Map<String, String>>> convertJSONtoMap(String previewSettings) {
         Map<String, List<Map<String, String>>> previewSettingsMap = new HashMap<>();
 
-        try {
-            previewSettingsMap = new ObjectMapper().readValue(previewSettings, HashMap.class);
-        } catch (IOException e) {
-            logger.error("Error when parsing previewSettings JSON", e.getMessage());
+        if (StringUtils.isNotEmpty(previewSettings)) {
+            try {
+                previewSettingsMap = new ObjectMapper().readValue(previewSettings, HashMap.class);
+            } catch (IOException e) {
+                logger.error("Error when parsing previewSettings JSON", e.getMessage());
+            }
         }
 
         return previewSettingsMap;
