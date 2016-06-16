@@ -62,7 +62,6 @@ public class ElvisBinaryImpl implements Binary {
             return new ByteArrayInputStream(currentBinaryContent);
         }
         if (StringUtils.isNotBlank(this.url) && this.elvisSession != null) {
-            logger.info("ON VA CALL LE FICHIER : " + this.url);
             final String urlToUse = this.url;
             return elvisSession.execute(new BaseElvisActionCallback<ByteArrayInputStream>(elvisSession) {
                 @Override
@@ -108,7 +107,6 @@ public class ElvisBinaryImpl implements Binary {
 
     @Override
     public long getSize() throws RepositoryException {
-        logger.info("ON A BESOIN DE LA SIZE : " + this.url);
         if (currentBinaryContent != null && (fileSize == -1 || fileSize == 0)) {
             fileSize = currentBinaryContent.length;
         }

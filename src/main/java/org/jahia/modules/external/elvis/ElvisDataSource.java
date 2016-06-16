@@ -155,7 +155,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     @Override
     public Binary getThumbnailBinary(ExternalFile file) throws PathNotFoundException {
-        return new ElvisBinaryImpl(file.getProperties().get("thumbnailUrl")[0], Long.valueOf(file.getProperties().get("fileSize")[0]), elvisSession);
+        return new ElvisBinaryImpl(file.getProperties().get("thumbnailUrl")[0], -1, elvisSession);
     }
 
     @Override
@@ -264,10 +264,9 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         ExternalFile externalFile = new ExternalFile(ExternalFile.FileType.FILE, encodeDecodeSpecialCharacters(elPath, true), created, modified);
 
         // Set boolean to know if we need to get the thumbnail or not
-        String thumbnailUrl = "";
         if (element.has("thumbnailUrl")) {
             externalFile.setHasThumbnail(true);
-            thumbnailUrl = element.getString("thumbnailUrl");
+            externalFile.getProperties().put("thumbnailUrl", new String[]{element.getString("thumbnailUrl")});
         }
 
         // If possible use assetDomain value to map data but verify if we have mapping for current value if not use default file
@@ -295,7 +294,6 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         String downloadUrl = element.getString("originalUrl");
 
         externalFile.getProperties().put("downloadUrl", new String[]{downloadUrl});
-        externalFile.getProperties().put("thumbnailUrl", new String[]{thumbnailUrl});
         externalFile.getProperties().put("fileSize", new String[]{fileSize});
 
         for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
@@ -379,6 +377,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         ExternalFile previewFile = new ExternalFile(ExternalFile.FileType.FILE, encodeDecodeSpecialCharacters(elPath, true), modified, created);
 
         List<String> mixins = new ArrayList<>();
+        mixins.add(ELVISMIX_FILE);
         mixins.add(ELVISMIX_PREVIEW_FILE);
         if (assetDomain.equals("image")) {
             mixins.add(Constants.JAHIAMIX_IMAGE);
@@ -401,7 +400,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         }
         previewFile.setMixin(mixins);
         previewFile.getProperties().put("downloadUrl", new String[]{previewUrl});
-        previewFile.getProperties().put("fileSize", new String[]{"0"});
+        previewFile.getProperties().put("fileSize", new String[]{"-1"});
 
         // Set boolean to know if we need to get the thumbnail or not
         if (element.has("thumbnailUrl")) {
