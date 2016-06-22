@@ -55,7 +55,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     protected ElvisConfiguration configuration;
     private ElvisSession elvisSession;
 
-    private static String ELVISMIX_FILE = "elvismix:file";
+    protected static String ELVISMIX_FILE = "elvismix:file";
     private static String ELVISMIX_PREVIEW_FILE = "elvismix:previewFile";
     private static String EPF_FORMAT = "_EPF-FORMAT_";
     private static String EP_PREVIEW_F = "ED-preview-F";
@@ -72,6 +72,14 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     private  static String PROPERTY_THUMBNAIL_URL = "thumbnailUrl";
     private  static String PROPERTY_EXTENSION = "extension";
     private  static String PROPERTY_NAME = "name";
+
+    @Override
+    public Set<String> getSupportedNodeTypes() {
+        Set<String> supportedNodeTypes = super.getSupportedNodeTypes();
+        supportedNodeTypes.add(ElvisDataSource.ELVISMIX_FILE);
+        supportedNodeTypes.add(ElvisDataSource.ELVISMIX_PREVIEW_FILE);
+        return supportedNodeTypes;
+    }
 
     @Override
     public ExternalFile getExternalFile(String path) throws PathNotFoundException {

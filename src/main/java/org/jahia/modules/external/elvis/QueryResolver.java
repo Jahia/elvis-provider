@@ -24,6 +24,7 @@
 package org.jahia.modules.external.elvis;
 
 import org.apache.jackrabbit.commons.query.qom.Operator;
+import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalQuery;
 import org.jahia.utils.WebUtils;
 import org.slf4j.Logger;
@@ -67,8 +68,9 @@ public class QueryResolver {
         String nodeTypeName = selector.getNodeTypeName();
 
         // Supports queries on hierarchyNode as file queries
-        if (nodeTypeName.equals("nt:hierarchyNode")) {
-            nodeTypeName = "jnt:file";
+        if (nodeTypeName.equals("nt:hierarchyNode")
+            || nodeTypeName.equals(ElvisDataSource.ELVISMIX_FILE)) {
+            nodeTypeName = Constants.JAHIANT_FILE;
         }
 
         elvisTypesMapping = configuration.getTypeByJCRName(nodeTypeName);
@@ -77,7 +79,7 @@ public class QueryResolver {
             return null;
         }
 
-        if (!nodeTypeName.equals("jnt:file")) {
+        if (!nodeTypeName.equals(Constants.JAHIANT_FILE)) {
             buff.append("(");
             for (int i = 0 ; i < elvisTypesMapping.size() ; i++) {
                 if (i > 0) {
