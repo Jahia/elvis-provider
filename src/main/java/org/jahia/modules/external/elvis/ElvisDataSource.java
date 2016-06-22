@@ -77,7 +77,6 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     public Set<String> getSupportedNodeTypes() {
         Set<String> supportedNodeTypes = super.getSupportedNodeTypes();
         supportedNodeTypes.add(ElvisDataSource.ELVISMIX_FILE);
-        supportedNodeTypes.add(ElvisDataSource.ELVISMIX_PREVIEW_FILE);
         return supportedNodeTypes;
     }
 
