@@ -440,9 +440,9 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                             "/previews/maxWidth_" + parameters.get("maxWidth") +
                             "_maxHeight_" + parameters.get("maxHeight");
         if (assetDomain.equals("image") && !parameters.get("ppi").isEmpty()) {
-            previewUrl += "_ppi_" + parameters.get("ppi") + "embedMetadata_true";
+            previewUrl += "_ppi_" + parameters.get("ppi");
         }
-        previewUrl += "." + parameters.get(PROPERTY_EXTENSION);
+        previewUrl += "_embedMetadata_true." + parameters.get(PROPERTY_EXTENSION);
         return previewUrl;
     }
 
