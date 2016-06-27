@@ -29,15 +29,21 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.ssl.SSLContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jcr.RepositoryException;
 import java.io.IOException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +58,7 @@ public class ElvisSession {
     private String password;
     private String baseUrl;
     private String fileLimit;
+    private String fieldToWriteUsage;
     private boolean usePreview;
     private Map<String, List<Map<String, String>>> previewSettings;
     private CloseableHttpClient httpClient;
@@ -68,6 +75,20 @@ public class ElvisSession {
         this.fileLimit = fileLimit;
         this.usePreview = usePreview;
         this.previewSettings = convertJSONtoMap(previewSettings);
+    }
+
+    public ElvisSession(String baseUrl, String userName, String password, String fileLimit, boolean usePreview,
+                        String previewSettings, String fieldToWriteUsage) {
+        if (baseUrl.endsWith("/")) {
+            baseUrl = StringUtils.substringBeforeLast(baseUrl, "/");
+        }
+        this.baseUrl = baseUrl;
+        this.userName = userName;
+        this.password = password;
+        this.fileLimit = fileLimit;
+        this.usePreview = usePreview;
+        this.previewSettings = convertJSONtoMap(previewSettings);
+        this.fieldToWriteUsage = fieldToWriteUsage;
     }
 
     public <X> X execute(ElvisSessionCallback<X> callback) throws RepositoryException {
@@ -94,7 +115,7 @@ public class ElvisSession {
         }
     }
 
-    void closeHttp() {
+    public void closeHttp() {
         try {
             httpClient.close();
         } catch (IOException e) {
@@ -127,6 +148,12 @@ public class ElvisSession {
         HttpGet get = new HttpGet(url);
         get.setHeader("Accept", "*/*");
         return httpClient.execute(get, context);
+    }
+
+    public void writeUsageOnAsset(String assetPath, String pageUrl) throws IOException {
+        HttpPost post = new HttpPost(this.baseUrl + "/services/updatebulk?q=assetPath:" + assetPath + "&" + this.fieldToWriteUsage + "=%2BTEST");
+        post.setHeader("Accept", "Application/Json");
+        httpClient.execute(post, context);
     }
 
     public String getFileLimit() {
