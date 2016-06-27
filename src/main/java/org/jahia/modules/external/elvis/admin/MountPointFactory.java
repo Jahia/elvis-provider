@@ -47,6 +47,8 @@ public class MountPointFactory extends AbstractMountPointFactory {
     public static final String FILE_LIMIT = "fileLimit";
     public static final String USE_PREVIEW = "usePreview";
     public static final String PREVIEW_SETTINGS = "previewSettings";
+    public static final String WRITE_USAGE_IN_ELVIS = "writeUsageInElvis";
+    public static final String FIELD_TO_WRITE_USAGE = "fieldToWriteUsage";
 
     @NotEmpty
     private String name;
@@ -64,6 +66,9 @@ public class MountPointFactory extends AbstractMountPointFactory {
 
     private String previewSettings;
     private boolean usePreview;
+
+    private String fieldToWriteUsage;
+    private boolean writeUsageInElvis;
 
     @Override
     public String getName() {
@@ -88,6 +93,8 @@ public class MountPointFactory extends AbstractMountPointFactory {
         mountNode.setProperty(FILE_LIMIT, fileLimit);
         mountNode.setProperty(USE_PREVIEW, usePreview);
         mountNode.setProperty(PREVIEW_SETTINGS, previewSettings);
+        mountNode.setProperty(WRITE_USAGE_IN_ELVIS, writeUsageInElvis);
+        mountNode.setProperty(FIELD_TO_WRITE_USAGE, fieldToWriteUsage);
     }
 
     @Override
@@ -105,6 +112,8 @@ public class MountPointFactory extends AbstractMountPointFactory {
         this.fileLimit = nodeWrapper.getPropertyAsString(FILE_LIMIT);
         this.usePreview = nodeWrapper.getProperty(USE_PREVIEW).getBoolean();
         this.previewSettings = nodeWrapper.getPropertyAsString(PREVIEW_SETTINGS);
+        this.writeUsageInElvis = nodeWrapper.getProperty(WRITE_USAGE_IN_ELVIS).getBoolean();
+        this.fieldToWriteUsage = nodeWrapper.getPropertyAsString(FIELD_TO_WRITE_USAGE);
     }
 
     public void setName(String name) {
@@ -161,5 +170,21 @@ public class MountPointFactory extends AbstractMountPointFactory {
 
     public void setPreviewSettings(String previewSettings) {
         this.previewSettings = previewSettings;
+    }
+
+    public String getFieldToWriteUsage() {
+        return fieldToWriteUsage;
+    }
+
+    public void setFieldToWriteUsage(String fieldToWriteUsage) {
+        this.fieldToWriteUsage = fieldToWriteUsage;
+    }
+
+    public boolean isWriteUsageInElvis() {
+        return writeUsageInElvis;
+    }
+
+    public void setWriteUsageInElvis(boolean writeUsageInElvis) {
+        this.writeUsageInElvis = writeUsageInElvis;
     }
 }
