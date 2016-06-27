@@ -238,8 +238,26 @@
             }
         };
 
+        function validateMountPointForm() {
+            console.log('LALALALALA');
+            console.log($('#writeUsageInElvis1').is(":checked"));
+            console.log($('#fieldToWriteUsage').val() == '');
+            console.log($('#fieldToWriteUsage').val());
+            console.log($('#writeUsageInElvis1').is(":checked") && $('#fieldToWriteUsage').val() == '');
+            if ($('#writeUsageInElvis1').is(":checked") && $('#fieldToWriteUsage').val() == '') {
+                console.log('IFFFFFFFF');
+                $('#fieldToWriteUsageDiv').addClass('error');
+                $('#fieldToWriteUsageDiv .controls').append('<span class="help-inline">' + mapI18nMPF.errorFieldRequired + '</span>');
+                return false;
+            }
+        }
+
         $(document).ready(function() {
             managePreviewSettings.init();
+
+            if ($('#writeUsageInElvis1').is(":checked")) {
+                $('#fieldToWriteUsageDiv').toggle();
+            }
 
             if ($('#fileLimit').val() == '') {
                 $('#fileLimit').val('-1');
@@ -318,24 +336,60 @@
                     <fmt:message key="elvisnt_mountPoint.fileLimit"/> <span style="color: red">*</span>
                 </form:label>
                 <div class="controls">
-                    <form:input path="fileLimit" showPassword="true"/>
+                    <form:input path="fileLimit"/>
                     <c:if test="${fn:contains(messagesSource, 'fileLimit')}">
-                <span class="help-inline">
-                    <form:errors path="fileLimit"/>
-                </span>
+                        <span class="help-inline">
+                            <form:errors path="fileLimit"/>
+                        </span>
                     </c:if>
-            <span class="help-block">
-                <div class="alert alert-info">
-                    <fmt:message key="elvisnt_mountPoint.fileLimit.info"/>
-                </div>
-            </span>
+                    <span class="help-block">
+                        <div class="alert alert-info">
+                            <fmt:message key="elvisnt_mountPoint.fileLimit.info"/>
+                        </div>
+                    </span>
                 </div>
             </div>
+
+            <div class="control-group <c:if test='${fn:contains(messagesSource, "writeUsageInElvis")}'> error</c:if>">
+                <div class="controls">
+                    <form:label path="writeUsageInElvis" for="writeUsageInElvis1" class="checkbox">
+                        <form:checkbox path="writeUsageInElvis" onchange="$('#fieldToWriteUsageDiv').toggle();"/>
+                        <fmt:message key="elvisnt_mountPoint.writeUsageInElvis"/>
+                    </form:label>
+                    <c:if test="${fn:contains(messagesSource, 'writeUsageInElvis')}">
+                        <span class="help-inline">
+                            <form:errors path="writeUsageInElvis"/>
+                        </span>
+                    </c:if>
+                    <span class="help-block">
+                        <div class="alert alert-info">
+                            <fmt:message key="elvisnt_mountPoint.writeUsageInElvis.info"/>
+                        </div>
+                    </span>
+                </div>
+            </div>
+
+            <div class="control-group <c:if test='${fn:contains(messagesSource, "fieldToWriteUsage")}'> error</c:if>"
+                 id="fieldToWriteUsageDiv" style="display: none;">
+                <form:label path="fieldToWriteUsage" cssClass="control-label">
+                    <fmt:message key="elvisnt_mountPoint.fieldToWriteUsage"/> <span style="color: red">*</span>
+                </form:label>
+                <div class="controls">
+                    <form:input path="fieldToWriteUsage"/>
+                    <c:if test="${fn:contains(messagesSource, 'fieldToWriteUsage')}">
+                        <span class="help-inline">
+                            <form:errors path="fieldToWriteUsage"/>
+                        </span>
+                    </c:if>
+                </div>
+            </div>
+
+
             <div class="control-group <c:if test='${fn:contains(messagesSource, "usePreview")}'> error</c:if>">
                 <div class="controls">
-                    <form:label path="usePreview" cssClass="checkbox">
+                    <form:label path="usePreview" for="usePreview1" class="checkbox">
                         <form:checkbox path="usePreview" onchange="managePreviewSettings.togglePanel();"/>
-                        <fmt:message key="elvisnt_mountPoint.usePreview"/> <span style="color: red">*</span>
+                        <fmt:message key="elvisnt_mountPoint.usePreview"/>
                     </form:label>
                     <c:if test="${fn:contains(messagesSource, 'usePreview')}">
                         <span class="help-inline">
@@ -385,10 +439,10 @@
             </div>
 
             <div class="form-actions">
-                <button class="btn btn-primary" type="submit" name="_eventId_save">
+                <button type="submit" name="_eventId_save" class="btn btn-primary" onclick="validateMountPointForm();">
                     <fmt:message key="label.save"/>
                 </button>
-                <button class="btn" type="submit" name="_eventId_cancel">
+                <button type="submit" name="_eventId_cancel" class="btn">
                     <fmt:message key="label.cancel"/>
                 </button>
             </div>
