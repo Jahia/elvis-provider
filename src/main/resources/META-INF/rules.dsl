@@ -1,0 +1,2 @@
+[condition][]- the property match the elvis condition=eval(elvisRulesService.checkCondition($node.getNode(), propertyName))
+[condition][]- the node has a property that match the elvis condition=eval(elvisRulesService.checkCondition($node.getIdentifier()))

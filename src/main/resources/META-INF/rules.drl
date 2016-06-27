@@ -1,0 +1,52 @@
+package org.jahia.modules.elvisprovider.rules
+
+// list any import classes here.
+import org.jahia.services.content.rules.*
+import org.jahia.services.content.JCRContentUtils
+import org.jahia.modules.external.elvis.rules.ElvisRulesService
+import org.slf4j.Logger
+
+expander rules.dsl
+
+// declare any global variables here
+global User user
+global Service service
+global Logger logger
+global JCRContentUtils jcrUtils
+global ElvisRulesService elvisRulesService
+
+rule "Write usage to Elvis DAM"
+    when
+        Not in operation import
+        A property has been set on a node
+            - the property match the elvis condition
+    then
+>       elvisRulesService.writeUsageInElvis(node.getNode(), propertyName);
+end
+
+rule "Remove usage in Elvis DAM"
+    when
+        Not in operation import
+        A node is deleted
+            - the node has a property that match the elvis condition
+    then
+>       elvisRulesService.writeUsageInElvis(node.getPath());
+end
+
+rule "Remove elvismix:file from the node"
+    when
+        Not in operation import
+        A new node is created
+            - the node has the type elvismix:file
+    then
+        Remove the type elvismix:file
+end
+
+rule "Remove elvismix:previewFile from the node"
+    when
+        Not in operation import
+        A new node is created
+            - the node has the type elvismix:previewFile
+    then
+        Remove the type elvismix:previewFile
+end
