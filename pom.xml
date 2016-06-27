@@ -35,6 +35,15 @@
         <tag>HEAD</tag>
     </scm>
 
+    <properties>
+        <jahia.modules.importPackage>
+            org.jahia.defaults.config.spring,
+            org.jahia.exceptions,
+            org.jahia.services,
+            javassist.util.proxy
+        </jahia.modules.importPackage>
+    </properties>
+
     <repositories>
         <repository>
             <id>jahia-public</id>
@@ -76,4 +85,75 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>generate-ddl</id>
+            <activation>
+                <property>
+                    <name>jahia.generate.ddl</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>de.juplo</groupId>
+                        <artifactId>hibernate4-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>ddl-derby</id>
+                                <goals>
+                                    <goal>export</goal>
+                                </goals>
+                                <configuration>
+                                    <hibernateDialect>${hibernateDialect.derby}</hibernateDialect>
+                                    <outputFile>${basedir}/src/main/resources/META-INF/db/derby/elvis-provider-schema.sql</outputFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>ddl-mssql</id>
+                                <goals>
+                                    <goal>export</goal>
+                                </goals>
+                                <configuration>
+                                    <hibernateDialect>${hibernateDialect.mssql}</hibernateDialect>
+                                    <outputFile>${basedir}/src/main/resources/META-INF/db/mssql/elvis-provider-schema.sql</outputFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>ddl-mysql</id>
+                                <goals>
+                                    <goal>export</goal>
+                                </goals>
+                                <configuration>
+                                    <hibernateDialect>${hibernateDialect.mysql}</hibernateDialect>
+                                    <outputFile>${basedir}/src/main/resources/META-INF/db/mysql/elvis-provider-schema.sql</outputFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>ddl-oracle</id>
+                                <goals>
+                                    <goal>export</goal>
+                                </goals>
+                                <configuration>
+                                    <hibernateDialect>${hibernateDialect.oracle}</hibernateDialect>
+                                    <outputFile>${basedir}/src/main/resources/META-INF/db/oracle/elvis-provider-schema.sql</outputFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>ddl-postgresql</id>
+                                <goals>
+                                    <goal>export</goal>
+                                </goals>
+                                <configuration>
+                                    <hibernateDialect>${hibernateDialect.postgresql}</hibernateDialect>
+                                    <outputFile>${basedir}/src/main/resources/META-INF/db/postgresql/elvis-provider-schema.sql</outputFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
