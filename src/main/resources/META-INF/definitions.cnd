@@ -13,6 +13,7 @@
  - userName (string) mandatory indexed=no nofulltext
  - password (string) mandatory indexed=no noqueryorder nofulltext hidden
  - fileLimit (string) mandatory indexed=no noqueryorder nofulltext
+ - trustAllCertificate (boolean) mandatory indexed=no noqueryorder nofulltext
  - usePreview (boolean) mandatory indexed=no noqueryorder nofulltext
  - previewSettings (string) indexed=no noqueryorder nofulltext
  - writeUsageInElvis (boolean) mandatory indexed=no noqueryorder nofulltext

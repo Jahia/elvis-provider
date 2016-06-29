@@ -49,6 +49,7 @@ public class MountPointFactory extends AbstractMountPointFactory {
     public static final String PREVIEW_SETTINGS = "previewSettings";
     public static final String WRITE_USAGE_IN_ELVIS = "writeUsageInElvis";
     public static final String FIELD_TO_WRITE_USAGE = "fieldToWriteUsage";
+    public static final String TRUST_ALL_CERTIFICATE = "trustAllCertificate";
 
     @NotEmpty
     private String name;
@@ -63,6 +64,8 @@ public class MountPointFactory extends AbstractMountPointFactory {
     private String password;
     @NotEmpty
     private String fileLimit;
+
+    private boolean trustAllCertificate;
 
     private String previewSettings;
     private boolean usePreview;
@@ -95,6 +98,7 @@ public class MountPointFactory extends AbstractMountPointFactory {
         mountNode.setProperty(PREVIEW_SETTINGS, previewSettings);
         mountNode.setProperty(WRITE_USAGE_IN_ELVIS, writeUsageInElvis);
         mountNode.setProperty(FIELD_TO_WRITE_USAGE, fieldToWriteUsage);
+        mountNode.setProperty(TRUST_ALL_CERTIFICATE, trustAllCertificate);
     }
 
     @Override
@@ -110,6 +114,7 @@ public class MountPointFactory extends AbstractMountPointFactory {
         this.password = nodeWrapper.getPropertyAsString(PASSWORD);
         this.url = nodeWrapper.getPropertyAsString(URL);
         this.fileLimit = nodeWrapper.getPropertyAsString(FILE_LIMIT);
+        this.trustAllCertificate = nodeWrapper.getProperty(TRUST_ALL_CERTIFICATE).getBoolean();
         this.usePreview = nodeWrapper.getProperty(USE_PREVIEW).getBoolean();
         this.previewSettings = nodeWrapper.getPropertyAsString(PREVIEW_SETTINGS);
         this.writeUsageInElvis = nodeWrapper.getProperty(WRITE_USAGE_IN_ELVIS).getBoolean();
@@ -186,5 +191,13 @@ public class MountPointFactory extends AbstractMountPointFactory {
 
     public void setWriteUsageInElvis(boolean writeUsageInElvis) {
         this.writeUsageInElvis = writeUsageInElvis;
+    }
+
+    public boolean isTrustAllCertificate() {
+        return trustAllCertificate;
+    }
+
+    public void setTrustAllCertificate(boolean trustAllCertificate) {
+        this.trustAllCertificate = trustAllCertificate;
     }
 }

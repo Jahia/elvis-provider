@@ -31,11 +31,14 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.ssl.SSLContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,12 +60,13 @@ public class ElvisSession {
     private String fileLimit;
     private String fieldToWriteUsage;
     private boolean usePreview;
+    private boolean trustAllCertificate;
     private Map<String, List<Map<String, String>>> previewSettings;
     private CloseableHttpClient httpClient;
     private HttpClientContext context;
 
     public ElvisSession(String baseUrl, String userName, String password, String fileLimit, boolean usePreview,
-                        String previewSettings, String fieldToWriteUsage) {
+                        String previewSettings, String fieldToWriteUsage, boolean trustAllCertificate) {
         if (baseUrl.endsWith("/")) {
             baseUrl = StringUtils.substringBeforeLast(baseUrl, "/");
         }
@@ -73,6 +77,7 @@ public class ElvisSession {
         this.usePreview = usePreview;
         this.previewSettings = convertJSONtoMap(previewSettings);
         this.fieldToWriteUsage = fieldToWriteUsage;
+        this.trustAllCertificate = trustAllCertificate;
     }
 
     public <X> X execute(ElvisSessionCallback<X> callback) throws RepositoryException {
@@ -84,10 +89,24 @@ public class ElvisSession {
     }
 
     public void initHttp() {
-        context = HttpClientContext.create();
-        CookieStore cookieStore = new BasicCookieStore();
-        context.setCookieStore(cookieStore);
-        httpClient = HttpClientBuilder.create().setDefaultCookieStore(cookieStore).build();
+        if (trustAllCertificate) {
+            try {
+                SSLContextBuilder builder = new SSLContextBuilder();
+                builder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
+                SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(builder.build());
+                context = HttpClientContext.create();
+                CookieStore cookieStore = new BasicCookieStore();
+                context.setCookieStore(cookieStore);
+                httpClient = HttpClientBuilder.create().setDefaultCookieStore(cookieStore).setSSLSocketFactory(sslsf).build();
+            } catch (Exception e) {
+                logger.error(e.getMessage());
+            }
+        } else {
+            context = HttpClientContext.create();
+            CookieStore cookieStore = new BasicCookieStore();
+            context.setCookieStore(cookieStore);
+            httpClient = HttpClientBuilder.create().setDefaultCookieStore(cookieStore).build();
+        }
     }
 
     public void logout() {

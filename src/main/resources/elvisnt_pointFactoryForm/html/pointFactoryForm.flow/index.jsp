@@ -300,6 +300,25 @@
                 </div>
             </div>
 
+            <div class="control-group <c:if test='${fn:contains(messagesSource, "trustAllCertificate")}'> error</c:if>">
+                <div class="controls">
+                    <form:label path="trustAllCertificate" for="trustAllCertificate1" class="checkbox">
+                        <form:checkbox path="trustAllCertificate"/>
+                        <fmt:message key="elvisnt_mountPoint.trustAllCertificate"/>
+                    </form:label>
+                    <c:if test="${fn:contains(messagesSource, 'trustAllCertificate')}">
+                        <span class="help-inline">
+                            <form:errors path="trustAllCertificate"/>
+                        </span>
+                    </c:if>
+                    <span class="help-block">
+                        <div class="alert alert-info">
+                            <fmt:message key="elvisnt_mountPoint.trustAllCertificate.info"/>
+                        </div>
+                    </span>
+                </div>
+            </div>
+
             <div class="control-group <c:if test='${fn:contains(messagesSource, "userName")}'> error</c:if>">
                 <form:label path="userName" cssClass="control-label">
                     <fmt:message key="elvisnt_mountPoint.userName"/> <span style="color: red">*</span>
