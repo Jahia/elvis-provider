@@ -239,16 +239,13 @@
         };
 
         function validateMountPointForm() {
-            console.log('LALALALALA');
-            console.log($('#writeUsageInElvis1').is(":checked"));
-            console.log($('#fieldToWriteUsage').val() == '');
-            console.log($('#fieldToWriteUsage').val());
-            console.log($('#writeUsageInElvis1').is(":checked") && $('#fieldToWriteUsage').val() == '');
             if ($('#writeUsageInElvis1').is(":checked") && $('#fieldToWriteUsage').val() == '') {
-                console.log('IFFFFFFFF');
                 $('#fieldToWriteUsageDiv').addClass('error');
                 $('#fieldToWriteUsageDiv .controls').append('<span class="help-inline">' + mapI18nMPF.errorFieldRequired + '</span>');
                 return false;
+            } else {
+                $('#elvisFactory').append('<input type="hidden" name="_eventId" value="save">');
+                $('#elvisFactory').submit();
             }
         }
 
@@ -439,7 +436,7 @@
             </div>
 
             <div class="form-actions">
-                <button type="submit" name="_eventId_save" class="btn btn-primary" onclick="validateMountPointForm();">
+                <button type="button" class="btn btn-primary" onclick="validateMountPointForm();">
                     <fmt:message key="label.save"/>
                 </button>
                 <button type="submit" name="_eventId_cancel" class="btn">
