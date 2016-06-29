@@ -15,6 +15,8 @@
  - fileLimit (string) mandatory indexed=no noqueryorder nofulltext
  - usePreview (boolean) mandatory indexed=no noqueryorder nofulltext
  - previewSettings (string) indexed=no noqueryorder nofulltext
+ - writeUsageInElvis (boolean) mandatory indexed=no noqueryorder nofulltext
+ - fieldToWriteUsage (string) indexed=no noqueryorder nofulltext
 
 [elvismix:previewFile] mixin
  - previewFormatName (string) protected

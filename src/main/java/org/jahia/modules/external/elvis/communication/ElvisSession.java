@@ -29,7 +29,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -52,13 +55,14 @@ public class ElvisSession {
     private String password;
     private String baseUrl;
     private String fileLimit;
+    private String fieldToWriteUsage;
     private boolean usePreview;
     private Map<String, List<Map<String, String>>> previewSettings;
     private CloseableHttpClient httpClient;
     private HttpClientContext context;
 
     public ElvisSession(String baseUrl, String userName, String password, String fileLimit, boolean usePreview,
-                        String previewSettings) {
+                        String previewSettings, String fieldToWriteUsage) {
         if (baseUrl.endsWith("/")) {
             baseUrl = StringUtils.substringBeforeLast(baseUrl, "/");
         }
@@ -68,6 +72,7 @@ public class ElvisSession {
         this.fileLimit = fileLimit;
         this.usePreview = usePreview;
         this.previewSettings = convertJSONtoMap(previewSettings);
+        this.fieldToWriteUsage = fieldToWriteUsage;
     }
 
     public <X> X execute(ElvisSessionCallback<X> callback) throws RepositoryException {
@@ -94,7 +99,7 @@ public class ElvisSession {
         }
     }
 
-    void closeHttp() {
+    public void closeHttp() {
         try {
             httpClient.close();
         } catch (IOException e) {
@@ -127,6 +132,14 @@ public class ElvisSession {
         HttpGet get = new HttpGet(url);
         get.setHeader("Accept", "*/*");
         return httpClient.execute(get, context);
+    }
+
+    public CloseableHttpResponse writeAssetUsageInElvis(String assetPath, String pageUrl, boolean add) throws IOException{
+        HttpPost post = new HttpPost(this.baseUrl + "/services/updatebulk");
+        String parameters = "q=assetPath:\"" + assetPath + "\"&" + this.fieldToWriteUsage + (add?"=%2B":"=-") + pageUrl;
+        StringEntity stringEntity = new StringEntity(parameters, ContentType.APPLICATION_FORM_URLENCODED);
+        post.setEntity(stringEntity);
+        return httpClient.execute(post, context);
     }
 
     public String getFileLimit() {

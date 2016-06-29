@@ -68,8 +68,7 @@ public class QueryResolver {
         String nodeTypeName = selector.getNodeTypeName();
 
         // Supports queries on hierarchyNode as file queries
-        if (nodeTypeName.equals("nt:hierarchyNode")
-            || nodeTypeName.equals(ElvisDataSource.ELVISMIX_FILE)) {
+        if (nodeTypeName.equals("nt:hierarchyNode") || nodeTypeName.equals(ElvisConstants.ELVISMIX_FILE)) {
             nodeTypeName = Constants.JAHIANT_FILE;
         }
 
