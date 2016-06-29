@@ -85,7 +85,8 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
                                                     mountPoint.getPropertyAsString(MountPointFactory.PASSWORD),
                                                     mountPoint.getPropertyAsString(MountPointFactory.FILE_LIMIT),
                                                     mountPoint.getProperty(MountPointFactory.USE_PREVIEW).getBoolean(),
-                                                    mountPoint.getPropertyAsString(MountPointFactory.PREVIEW_SETTINGS)));
+                                                    mountPoint.getPropertyAsString(MountPointFactory.PREVIEW_SETTINGS),
+                                                    mountPoint.getPropertyAsString(MountPointFactory.FIELD_TO_WRITE_USAGE)));
         // Start the datasource
         dataSource.start();
         // Finalize the provider setup with datasource and some JCR parameters
