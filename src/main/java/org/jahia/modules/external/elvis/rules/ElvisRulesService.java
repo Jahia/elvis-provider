@@ -1,21 +1,54 @@
+/**
+ * ==========================================================================================
+ * =                            JAHIA'S ENTERPRISE DISTRIBUTION                             =
+ * ==========================================================================================
+ *
+ *                                  http://www.jahia.com
+ *
+ * JAHIA'S ENTERPRISE DISTRIBUTIONS LICENSING - IMPORTANT INFORMATION
+ * ==========================================================================================
+ *
+ *     Copyright (C) 2002-2016 Jahia Solutions Group. All rights reserved.
+ *
+ *     This file is part of a Jahia's Enterprise Distribution.
+ *
+ *     Jahia's Enterprise Distributions must be used in accordance with the terms
+ *     contained in the Jahia Solutions Group Terms & Conditions as well as
+ *     the Jahia Sustainable Enterprise License (JSEL).
+ *
+ *     For questions regarding licensing, support, production usage...
+ *     please contact our team at sales@jahia.com or go to http://www.jahia.com/license.
+ *
+ * ==========================================================================================
+ */
 package org.jahia.modules.external.elvis.rules;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.util.EntityUtils;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.jahia.api.Constants;
+import org.jahia.modules.external.ExternalContentStoreProvider;
+import org.jahia.modules.external.elvis.ElvisConstants;
+import org.jahia.modules.external.elvis.ElvisDataSource;
+import org.jahia.modules.external.elvis.ElvisUtils;
 import org.jahia.modules.external.elvis.admin.MountPointFactory;
 import org.jahia.modules.external.elvis.communication.BaseElvisActionCallback;
 import org.jahia.modules.external.elvis.communication.ElvisSession;
 import org.jahia.modules.external.elvis.decorator.ElvisMountPointNode;
 import org.jahia.services.content.*;
+import org.jahia.services.content.rules.ChangedPropertyFact;
 import org.jahia.settings.SettingsBean;
-import org.jahia.utils.WebUtils;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jcr.PropertyType;
 import javax.jcr.RepositoryException;
+import java.io.IOException;
+import java.util.List;
 
 /**
  * @author dgaillard
@@ -38,73 +71,102 @@ public class ElvisRulesService {
         return instance;
     }
 
-    public void writeUsageInElvis(final JCRNodeWrapper node, final String propertyName) throws RepositoryException {
-        jcrTemplate.doExecuteWithSystemSession(new JCRCallback<Object>() {
-            @Override
-            public Object doInJCR(JCRSessionWrapper session) throws RepositoryException {
-                JCRNodeWrapper referencedNode = (JCRNodeWrapper) node.getProperty(propertyName).getNode();
-                final String assetPath = WebUtils.escapePath(encodeDecodeSpecialCharacters(StringUtils.substringAfter(referencedNode.getPath(), referencedNode.getProvider().getMountPoint()), false));
-                ElvisMountPointNode elvisMountPointNode = (ElvisMountPointNode) session.getNodeByIdentifier(referencedNode.getProvider().getKey());
-                if (elvisMountPointNode.hasProperty(MountPointFactory.WRITE_USAGE_IN_ELVIS) && elvisMountPointNode.getProperty(MountPointFactory.WRITE_USAGE_IN_ELVIS).getBoolean()) {
-                    addEntryToDB(new ElvisUsageMapping(node.getIdentifier(), propertyName, assetPath, elvisMountPointNode.getIdentifier()));
-                    final int siteURLPortOverride = SettingsBean.getInstance().getSiteURLPortOverride();
-                    String baseUrl = "http" + (siteURLPortOverride == 443 ? "s" : "") + "://" + node.getResolveSite().getServerName() +
-                                    ((siteURLPortOverride != 0 && siteURLPortOverride != 80 && siteURLPortOverride != 443) ? ":" + siteURLPortOverride : "");
-                    final String pageUrl = baseUrl + JCRContentUtils.getParentOfType(node, Constants.JAHIANT_PAGE).getUrl();
-                    final ElvisSession elvisSession = new ElvisSession(elvisMountPointNode.getPropertyAsString(MountPointFactory.URL),
-                                                                elvisMountPointNode.getPropertyAsString(MountPointFactory.USER_NAME),
-                                                                elvisMountPointNode.getPropertyAsString(MountPointFactory.PASSWORD),
-                                                                elvisMountPointNode.getPropertyAsString(MountPointFactory.FILE_LIMIT),
-                                                                elvisMountPointNode.getProperty(MountPointFactory.USE_PREVIEW).getBoolean(),
-                                                                elvisMountPointNode.getPropertyAsString(MountPointFactory.PREVIEW_SETTINGS),
-                                                                elvisMountPointNode.getPropertyAsString(MountPointFactory.FIELD_TO_WRITE_USAGE));
+    /**
+     * Method call by the rule every time a node is created with a property of type weakreference or reference,
+     * also call every time a property of this type is modified
+     * @param changedPropertyFact   : the modified property
+     * @throws RepositoryException
+     */
+    public void writeUsageInElvis(ChangedPropertyFact changedPropertyFact) throws RepositoryException {
+        final JCRNodeWrapper node = changedPropertyFact.getNode().getNode();
+        final JCRNodeWrapper referencedNode = changedPropertyFact.getNodeValue().getNode();
+        final String nodeIdentifier = changedPropertyFact.getNode().getIdentifier();
+        final String propertyName = changedPropertyFact.getName();
 
-                    elvisSession.initHttp();
-                    if (elvisSession.isSessionAvailable()) {
-                        elvisSession.execute(new BaseElvisActionCallback<Object>(elvisSession) {
+        final Session hibernateSession = hibernateSessionFactory.openSession();
+        List<ElvisUsageMapping> list = hibernateSession.createQuery("from ElvisUsageMapping where componentIdentifier=:componentIdentifier and propertyName=:propertyName")
+                .setString("componentIdentifier", nodeIdentifier).setString("propertyName", propertyName).list();
+        if (!list.isEmpty()) {
+            removeUsageFromElvis(hibernateSession, list);
+        }
+
+        if (referencedNode.isNodeType(ElvisConstants.ELVISMIX_FILE)) {
+            jcrTemplate.doExecuteWithSystemSession(new JCRCallback<Object>() {
+                @Override
+                public Object doInJCR(JCRSessionWrapper session) throws RepositoryException {
+                    String referencedNodePath = StringUtils.substringAfter(referencedNode.getPath(), referencedNode.getProvider().getMountPoint());
+                    if (referencedNode.isNodeType(ElvisConstants.ELVISMIX_PREVIEW_FILE)) {
+                        referencedNodePath = ElvisUtils.getOriginalFilePath(referencedNodePath);
+                    }
+                    final String assetPath = ElvisUtils.encodeDecodeSpecialCharacters(referencedNodePath, false);
+
+                    ElvisMountPointNode elvisMountPointNode = (ElvisMountPointNode) session.getNodeByIdentifier(referencedNode.getProvider().getKey());
+                    if (elvisMountPointNode.hasProperty(MountPointFactory.WRITE_USAGE_IN_ELVIS) && elvisMountPointNode.getProperty(MountPointFactory.WRITE_USAGE_IN_ELVIS).getBoolean()) {
+                        final int siteURLPortOverride = SettingsBean.getInstance().getSiteURLPortOverride();
+                        String baseUrl = "http" + (siteURLPortOverride == 443 ? "s" : "") + "://" + node.getResolveSite().getServerName() +
+                                ((siteURLPortOverride != 0 && siteURLPortOverride != 80 && siteURLPortOverride != 443) ? ":" + siteURLPortOverride : "");
+                        final String pageUrl = baseUrl + JCRContentUtils.getParentOfType(node, Constants.JAHIANT_PAGE).getUrl();
+                        addEntryToDB(hibernateSession, new ElvisUsageMapping(nodeIdentifier, propertyName, assetPath, elvisMountPointNode.getIdentifier(), pageUrl));
+
+                        ExternalContentStoreProvider externalContentStoreProvider = (ExternalContentStoreProvider) elvisMountPointNode.getMountProvider();
+                        ElvisDataSource elvisDataSource = (ElvisDataSource) externalContentStoreProvider.getDataSource();
+                        final ElvisSession elvisSession = elvisDataSource.getElvisSession();
+
+                        boolean updatedMetaData;
+                        updatedMetaData = elvisSession.execute(new BaseElvisActionCallback<Boolean>(elvisSession) {
                             @Override
-                            public Object doInElvis() throws Exception {
-                                elvisSession.writeUsageOnAsset(assetPath, pageUrl);
-                                return null;
+                            public Boolean doInElvis() throws Exception {
+                                CloseableHttpResponse response = elvisSession.writeAssetUsageInElvis(assetPath, pageUrl, true);
+                                return checkResponse(response);
                             }
                         });
+                        if (!updatedMetaData) {
+                            logger.error("Could not update information in Elvis");
+                        }
                     }
-                    elvisSession.logout();
+                    return null;
                 }
-                return null;
-            }
-        });
-    }
+            });
+        }
 
-    public void writeUsageInElvis(String deletedNodePath) {
-        logger.info(deletedNodePath);
-
+        hibernateSession.close();
     }
 
     /**
-     * Check is the property set on the node is a type weakreference/reference,
-     * then check if the referenced node is type "elvismix:file".
-     * @param node
-     * @param propertyName
+     * Method call every time a node which is registered in the database is deleted
+     * @param deletedNodeIdentifier : UUID of the deleted node
+     * @throws RepositoryException
+     */
+    public void removeUsageInElvis(String deletedNodeIdentifier) throws RepositoryException {
+        Session hibernateSession = hibernateSessionFactory.openSession();
+        List<ElvisUsageMapping> list = hibernateSession.createQuery("from ElvisUsageMapping where componentIdentifier=:componentIdentifier")
+                .setString("componentIdentifier", deletedNodeIdentifier).list();
+        removeUsageFromElvis(hibernateSession, list);
+        hibernateSession.close();
+    }
+
+    /**
+     * Check is the property set on the node is a type weakreference/reference.
+     * @param changedPropertyFact   : the modified property
      * @return boolean
      * @throws RepositoryException
      */
-    public boolean checkCondition(JCRNodeWrapper node, String propertyName) throws RepositoryException {
-        if (node.hasProperty(propertyName)) {
-            JCRPropertyWrapper property = node.getProperty(propertyName);
-            if (property.getType() == PropertyType.REFERENCE || property.getType() == PropertyType.WEAKREFERENCE) {
-                final JCRNodeWrapper referencedNode = (JCRNodeWrapper) property.getNode();
-                if (referencedNode.isNodeType("elvismix:file")) {
-                    return true;
-                }
-            }
-        }
-        return false;
+    public boolean checkCondition(ChangedPropertyFact changedPropertyFact) throws RepositoryException {
+        return (changedPropertyFact.getType() == PropertyType.REFERENCE || changedPropertyFact.getType() == PropertyType.WEAKREFERENCE);
     }
 
+    /**
+     * Check if the deleted node was using file(s) from Elvis
+     * @param deletedNodeIdentifier : UUID of the deleted node
+     * @return boolean
+     * @throws RepositoryException
+     */
     public boolean checkCondition(String deletedNodeIdentifier) throws RepositoryException {
-        logger.info(deletedNodeIdentifier);
-        return false;
+        Session hibernateSession = hibernateSessionFactory.openSession();
+        List<ElvisUsageMapping> list = hibernateSession.createQuery("from ElvisUsageMapping where componentIdentifier=:componentIdentifier")
+                .setString("componentIdentifier", deletedNodeIdentifier).list();
+        hibernateSession.close();
+        return !list.isEmpty();
     }
 
     public void setJcrTemplate(JCRTemplate jcrTemplate) {
@@ -115,24 +177,58 @@ public class ElvisRulesService {
         this.hibernateSessionFactory = hibernateSessionFactory;
     }
 
-    private void addEntryToDB(ElvisUsageMapping elvisUsageMapping) {
-        Session session = hibernateSessionFactory.openSession();
+    private void addEntryToDB(Session session, ElvisUsageMapping elvisUsageMapping) {
         session.beginTransaction();
         session.save(elvisUsageMapping);
         session.getTransaction().commit();
     }
 
-    /**
-     * To encode and decode characters not allowed by DXM and allowed by Elvis
-     * @param path      : path to encode/decode
-     * @param encode    : true if you want to encode
-     * @return encoded/decoded path
-     */
-    private String encodeDecodeSpecialCharacters(String path, boolean encode) {
-        if (encode) {
-            return (path!=null)?StringUtils.replaceEachRepeatedly(path.replace("%", "%25"), new String[]{"[","]"}, new String[]{"%5B","%5D"}):null;
+    private void removeUsageFromElvis(Session hibernateSession, List<ElvisUsageMapping> list) throws RepositoryException {
+        hibernateSession.beginTransaction();
+        for (ElvisUsageMapping elvisUsageMapping : list) {
+            final String mountPointIdentifier = elvisUsageMapping.getMountPointIdentifier();
+            final String assetPath = elvisUsageMapping.getAssetPath();
+            final String pageUrl = elvisUsageMapping.getPageUrl();
+            hibernateSession.delete(elvisUsageMapping);
+            jcrTemplate.doExecuteWithSystemSession(new JCRCallback<Object>() {
+                @Override
+                public Object doInJCR(JCRSessionWrapper session) throws RepositoryException {
+                    ElvisMountPointNode elvisMountPointNode = (ElvisMountPointNode) session.getNodeByIdentifier(mountPointIdentifier);
+                    if (elvisMountPointNode.hasProperty(MountPointFactory.WRITE_USAGE_IN_ELVIS) && elvisMountPointNode.getProperty(MountPointFactory.WRITE_USAGE_IN_ELVIS).getBoolean()) {
+                        ExternalContentStoreProvider externalContentStoreProvider = (ExternalContentStoreProvider) elvisMountPointNode.getMountProvider();
+                        ElvisDataSource elvisDataSource = (ElvisDataSource) externalContentStoreProvider.getDataSource();
+                        final ElvisSession elvisSession = elvisDataSource.getElvisSession();
+
+                        boolean updatedMetaData;
+                        updatedMetaData = elvisSession.execute(new BaseElvisActionCallback<Boolean>(elvisSession) {
+                            @Override
+                            public Boolean doInElvis() throws Exception {
+                                CloseableHttpResponse response = elvisSession.writeAssetUsageInElvis(assetPath, pageUrl, false);
+                                return checkResponse(response);
+                            }
+                        });
+                        if (!updatedMetaData) {
+                            logger.error("Could not update information in Elvis");
+                        }
+                    }
+                    return null;
+                }
+            });
+        }
+        hibernateSession.getTransaction().commit();
+    }
+
+    private Boolean checkResponse(CloseableHttpResponse response) throws IOException, JSONException, RepositoryException {
+        if (response.getStatusLine().getStatusCode() == 200) {
+            String jsonString = EntityUtils.toString(response.getEntity());
+            JSONObject jsonObject = new JSONObject(jsonString);
+            if (jsonObject.has("errorcode")) {
+                throw new JSONException(jsonString);
+            }
+            return jsonObject.has("processedCount") && jsonObject.getInt("processedCount") == 1
+                    && jsonObject.has("errorCount") && jsonObject.getInt("errorCount") == 0;
         } else {
-            return (path!=null && path.contains("%"))?StringUtils.replaceEachRepeatedly(path, new String[]{"%5B","%5D"}, new String[]{"[","]"}).replace("%25", "%"):path;
+            throw new RepositoryException("The request was not correctly executed please check your Elvis API Server");
         }
     }
 }
