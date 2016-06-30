@@ -56,20 +56,8 @@ import java.util.List;
 public class ElvisRulesService {
     private static final Logger logger = LoggerFactory.getLogger(ElvisRulesService.class);
 
-    private static ElvisRulesService instance;
     private JCRTemplate jcrTemplate;
     private SessionFactory hibernateSessionFactory;
-
-    public ElvisRulesService() {
-        super();
-    }
-
-    public static synchronized ElvisRulesService getInstance() {
-        if (instance == null) {
-            instance = new ElvisRulesService();
-        }
-        return instance;
-    }
 
     /**
      * Method call by the rule every time a node is created with a property of type weakreference or reference,

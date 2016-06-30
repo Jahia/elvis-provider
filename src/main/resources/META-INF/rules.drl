@@ -1,9 +1,8 @@
-package org.jahia.modules.elvisprovider.rules
+package org.jahia.modules.external.elvis.rules
 
 // list any import classes here.
 import org.jahia.services.content.rules.*
 import org.jahia.services.content.JCRContentUtils
-import org.jahia.modules.external.elvis.rules.ElvisRulesService
 import org.slf4j.Logger
 
 expander rules.dsl

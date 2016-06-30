@@ -96,7 +96,7 @@
         <property name="globalRulesObject">
             <map>
                 <entry key="elvisRulesService">
-                    <bean class="org.jahia.modules.external.elvis.rules.ElvisRulesService" factory-method="getInstance">
+                    <bean class="org.jahia.modules.external.elvis.rules.ElvisRulesService">
                         <property name="jcrTemplate" ref="jcrTemplate"/>
                         <property name="hibernateSessionFactory" ref="moduleSessionFactory"/>
                     </bean>
