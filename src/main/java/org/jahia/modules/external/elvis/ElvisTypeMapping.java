@@ -31,33 +31,44 @@ import java.util.*;
  * @author Damien GAILLARD
  */
 public class ElvisTypeMapping implements Cloneable {
-    private String jcrName;
-    private String elvisName;
+    private List<String> jcrName;
+    private List<String> elvisName;
     private List<ElvisPropertyMapping> properties;
     private Map<String, ElvisPropertyMapping> propertiesMapJCR;
     private Map<String, ElvisPropertyMapping> propertiesMapElvis;
 
     public ElvisTypeMapping() {}
 
-    public ElvisTypeMapping(String jcrName, String elvisName) {
+    public ElvisTypeMapping(List<String> jcrName, List<String> elvisName) {
         this.jcrName = jcrName;
         this.elvisName = elvisName;
     }
 
-    public String getJcrName() {
+    public List<String> getJcrName() {
         return jcrName;
     }
 
     public void setJcrName(String jcrName) {
-        this.jcrName = jcrName;
+        this.jcrName = Arrays.asList(jcrName.split("\\s*,\\s*"));
     }
 
-    public String getElvisName() {
+    public List<String> getElvisName() {
         return elvisName;
     }
 
+    public String getElvisNameAsQueryString() {
+        String elvisNameAsString = "";
+        for (int i = 0 ; i < elvisName.size() ; i++) {
+            if (i != 0) {
+                elvisNameAsString += "%20OR%20";
+            }
+            elvisNameAsString += elvisName.get(i);
+        }
+        return elvisNameAsString;
+    }
+
     public void setElvisName(String elvisName) {
-        this.elvisName = elvisName;
+        this.elvisName = Arrays.asList(elvisName.split("\\s*,\\s*"));
     }
 
     public List<ElvisPropertyMapping> getProperties() {

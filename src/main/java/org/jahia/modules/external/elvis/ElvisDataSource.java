@@ -58,7 +58,11 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     @Override
     public Set<String> getSupportedNodeTypes() {
         Set<String> supportedNodeTypes = super.getSupportedNodeTypes();
-        supportedNodeTypes.add(ElvisConstants.ELVISMIX_FILE);
+        for (String nodeTypes : configuration.getSupportedNodeTypes()) {
+            if (!supportedNodeTypes.contains(nodeTypes)) {
+                supportedNodeTypes.add(nodeTypes);
+            }
+        }
         return supportedNodeTypes;
     }
 
@@ -212,18 +216,16 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                     JSONObject element = searchJsonArray.getJSONObject(i);
                     JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
 
-                    if (elvisSession.usePreview()) {
-                        String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : "file";
-                        if (elvisSession.getPreviewSettings().containsKey(assetDomain)) {
-                            if (!elvisSession.getPreviewSettings().get(assetDomain).isEmpty()) {
-                                for (Map<String, String> previewParameters : elvisSession.getPreviewSettings().get(assetDomain)) {
-                                    String elPath = buildPreviewElPath(elMetadata, assetDomain, false, previewParameters);
-                                    pathList.add(elPath);
-                                }
-                            } else {
-                                String elPath = buildPreviewElPath(elMetadata, assetDomain, true, null);
+                    String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : "file";
+                    if (elvisSession.usePreview() && (assetDomain.equals("image") || assetDomain.equals("video"))) {
+                        if (elvisSession.getPreviewSettings().containsKey(assetDomain) && !elvisSession.getPreviewSettings().get(assetDomain).isEmpty()) {
+                            for (Map<String, String> previewParameters : elvisSession.getPreviewSettings().get(assetDomain)) {
+                                String elPath = buildPreviewElPath(elMetadata, assetDomain, false, previewParameters);
                                 pathList.add(elPath);
                             }
+                        } else {
+                            String elPath = buildPreviewElPath(elMetadata, assetDomain, true, null);
+                            pathList.add(elPath);
                         }
                     }
 
@@ -295,8 +297,8 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
         if (!assetDomain.equals("file")) {
             for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
-                if (!elvisTypeMapping.getJcrName().equals("jnt:file")) {
-                    mixins.add(elvisTypeMapping.getJcrName());
+                if (!elvisTypeMapping.getJcrName().contains(Constants.JAHIANT_FILE)) {
+                    mixins.addAll(elvisTypeMapping.getJcrName());
                 }
             }
         }

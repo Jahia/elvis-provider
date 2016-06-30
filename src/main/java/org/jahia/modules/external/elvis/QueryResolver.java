@@ -84,7 +84,7 @@ public class QueryResolver {
                 if (i > 0) {
                     buff.append("OR");
                 }
-                buff.append("assetDomain:\"").append(elvisTypesMapping.get(i).getElvisName()).append("\"");
+                buff.append("assetDomain:").append(elvisTypesMapping.get(i).getElvisNameAsQueryString());
             }
             buff.append(")");
         }

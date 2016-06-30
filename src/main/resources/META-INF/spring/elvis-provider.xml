@@ -6,7 +6,7 @@
                            http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
 
     <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" id="elvisFile"
-          p:jcrName="jnt:file" p:elvisName="file">
+          p:jcrName="jnt:file,elvismix:file" p:elvisName="file">
         <property name="properties">
             <list>
                 <bean p:elvisName="description" p:jcrName="jcr:description"
@@ -35,7 +35,7 @@
     </bean>
 
     <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" parent="elvisFile" id="elvisImage"
-          p:jcrName="jmix:image"
+          p:jcrName="jmix:image,jmix:exif"
           p:elvisName="image">
         <property name="properties">
             <list merge="true">
@@ -49,7 +49,7 @@
 
     <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" parent="elvisFile" id="elvisDocument"
           p:jcrName="jmix:document"
-          p:elvisName="document">
+          p:elvisName="document,pdf">
         <property name="properties">
             <list merge="true">
                 <bean p:elvisName="numberOfPages" p:jcrName="j:pageCount"
@@ -58,10 +58,6 @@
         </property>
     </bean>
 
-    <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" parent="elvisDocument" id="elvisPDF"
-          p:jcrName="jmix:document"
-          p:elvisName="pdf"/>
-
     <bean id="elvisConfiguration" class="org.jahia.modules.external.elvis.ElvisConfiguration" init-method="onStart"
           scope="prototype">
         <property name="typeMapping">
@@ -69,7 +65,6 @@
                 <ref bean="elvisFile"/>
                 <ref bean="elvisImage"/>
                 <ref bean="elvisDocument"/>
-                <ref bean="elvisPDF"/>
             </list>
         </property>
     </bean>
