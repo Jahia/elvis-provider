@@ -7,6 +7,8 @@ This module allow you to create a mount point in your Digital Factory in order t
 * Digital Factory 7.1.0.1
 * DF Module - External data provider V3.0.1 
 * Elvis DAM V5
+* **Important:** to use this module you must create yourself a table in your database before deploying it on your instance.  
+You will find the script to use [here](https://github.com/Jahia/elvis-provider/tree/master/src/main/resources/META-INF/db), choose the one related to your DB)
 
 ### PROVIDED MAPPING
 By default the module as a default mapping for all files and three extended mapping for images, documents and pdf.
