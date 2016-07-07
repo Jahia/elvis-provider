@@ -35,8 +35,7 @@
     </bean>
 
     <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" parent="elvisFile" id="elvisImage"
-          p:jcrName="jmix:image,jmix:exif"
-          p:elvisName="image">
+          p:jcrName="jmix:image,jmix:exif" p:elvisName="image">
         <property name="properties">
             <list merge="true">
                 <bean p:elvisName="width" p:jcrName="j:width"
@@ -58,8 +57,7 @@
     </bean>
 
     <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" parent="elvisFile" id="elvisDocument"
-          p:jcrName="jmix:document"
-          p:elvisName="document,pdf">
+          p:jcrName="jmix:document" p:elvisName="document,pdf">
         <property name="properties">
             <list merge="true">
                 <bean p:elvisName="numberOfPages" p:jcrName="j:pageCount"
