@@ -27,3 +27,6 @@
  - downloadUrl (string) indexed=no noqueryorder nofulltext hidden
  - thumbnailUrl (string) indexed=no noqueryorder nofulltext hidden
  - fileSize (string) indexed=no noqueryorder nofulltext hidden
+
+[elvismix:collection] mixin
+ - collectionIdentifier (string) protected

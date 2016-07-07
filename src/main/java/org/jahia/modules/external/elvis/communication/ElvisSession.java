@@ -151,25 +151,64 @@ public class ElvisSession {
         }
     }
 
+    /**
+     * This method get the folders of a folder
+     * @param folderPath    : path of the folder
+     * @return JSONArray
+     * @throws Exception
+     */
     public JSONArray getChildrenFolders(String folderPath) throws Exception {
         List<NameValuePair> nameValuePairs = new ArrayList<>();
         nameValuePairs.add(new BasicNameValuePair("path", folderPath));
         return getBrowseResponse(httpPostCall("/browse", nameValuePairs));
     }
 
+    /**
+     * This method get the files of a folder
+     * @param folderPath    : path of the folder
+     * @return JSONArray
+     * @throws Exception
+     */
     public JSONArray getChildrenFiles(String folderPath) throws Exception {
         List<NameValuePair> nameValuePairs = new ArrayList<>();
-        nameValuePairs.add(new BasicNameValuePair("q", "folderPath:\"" + folderPath + "\""));
+        nameValuePairs.add(new BasicNameValuePair("q", "folderPath:\"" + folderPath + "\" AND NOT assetDomain:container"));
         nameValuePairs.add(new BasicNameValuePair("num", fileLimit));
         return getHitsInSearchResponse(httpPostCall("/search", nameValuePairs));
     }
 
+    /**
+     * This method get files referenced in a collection,
+     * its not used yet as we are not sure how to display/handle external file reference.
+     * @param collectionIdentifier  : collection identifier to get the file to
+     * @return JSONArray
+     * @throws Exception
+     */
+    public JSONArray getCollectionFiles(String collectionIdentifier) throws Exception {
+        List<NameValuePair> nameValuePairs = new ArrayList<>();
+        nameValuePairs.add(new BasicNameValuePair("q", "relatedTo:" + collectionIdentifier));
+        nameValuePairs.add(new BasicNameValuePair("num", fileLimit));
+        return getHitsInSearchResponse(httpPostCall("/search", nameValuePairs));
+    }
+
+    /**
+     * This method get the details of a file
+     * @param filePath  : path of the file
+     * @return JSONArray
+     * @throws Exception
+     */
     public JSONArray getFile(String filePath) throws Exception {
         List<NameValuePair> nameValuePairs = new ArrayList<>();
         nameValuePairs.add(new BasicNameValuePair("q", "assetPath:\"" + filePath + "\""));
         return getHitsInSearchResponse(httpPostCall("/search", nameValuePairs));
     }
 
+    /**
+     * This method execute the given query in Elvis
+     * @param query         : query to execute
+     * @param queryLimit    : limit of result the query must return
+     * @return JSON Array
+     * @throws Exception
+     */
     public JSONArray search(String query, String queryLimit) throws Exception {
         List<NameValuePair> nameValuePairs = new ArrayList<>();
         nameValuePairs.add(new BasicNameValuePair("q", query));
@@ -177,6 +216,14 @@ public class ElvisSession {
         return getHitsInSearchResponse(httpPostCall("/search", nameValuePairs));
     }
 
+    /**
+     * This method update the metadata field of a file to save the usage
+     * @param filePath  : path of the file
+     * @param pageUrl   : Edit mode URL where the file is/was used
+     * @param add       : if we want to add or remove the information
+     * @return boolean
+     * @throws Exception
+     */
     public boolean updateBulk(String filePath, String pageUrl, boolean add) throws Exception {
         List<NameValuePair> nameValuePairs = new ArrayList<>();
         nameValuePairs.add(new BasicNameValuePair("q", "assetPath:\"" + filePath + "\""));
@@ -184,6 +231,12 @@ public class ElvisSession {
         return checkResponse(httpPostCall("/updatebulk", nameValuePairs));
     }
 
+    /**
+     * This method get the actual file data
+     * @param url   : URL of the file to download
+     * @return CloseableHttpResponse
+     * @throws IOException
+     */
     public CloseableHttpResponse getFileStream(String url) throws IOException {
         HttpGet get = new HttpGet(url);
         get.setHeader("Accept", MediaType.MULTIPART_FORM_DATA_VALUE);

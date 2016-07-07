@@ -99,7 +99,7 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
 
     public abstract ExternalFile getExternalFile(String path) throws PathNotFoundException ;
 
-    public abstract List<ExternalFile> getChildrenFiles(String path) throws RepositoryException ;
+    public abstract List<ExternalFile> getChildrenFiles(ExternalFile externalFile) throws RepositoryException ;
 
     public abstract Binary getFileBinary(ExternalFile file) throws PathNotFoundException ;
 
@@ -114,7 +114,7 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
                 }
                 return JCR_CONTENT_LIST;
             } else if (externalFile.getType().equals(Constants.JAHIANT_FOLDER)) {
-                List<ExternalFile> files = getChildrenFiles(path);
+                List<ExternalFile> files = getChildrenFiles(externalFile);
                 if (files.size() > 0) {
                     List<String> children = new LinkedList<>();
                     for (ExternalFile object : files) {
@@ -142,7 +142,7 @@ public abstract class FilesDataSource implements ExternalDataSource, ExternalDat
                 }
                 return externalDatas;
             } else if (externalFile.getType().equals(Constants.JAHIANT_FOLDER)) {
-                List<ExternalFile>  files = getChildrenFiles(externalFile.getPath());
+                List<ExternalFile>  files = getChildrenFiles(externalFile);
                 if (files.size() > 0) {
                     List<ExternalData> children = new LinkedList<>();
                     for (ExternalFile object : files) {

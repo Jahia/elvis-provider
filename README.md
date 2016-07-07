@@ -1,7 +1,8 @@
 # Elvis External Provider
 
 ### INFORMATION
-This module allow you to create a mount point in your Digital Factory in order to browse and search your folders/files on your Elvis Server.
+This module allow you to create a mount point in your Digital Factory in order to browse and search your folders/files on your Elvis Server.  
+**Note:** Elvis collection are displayed as an empty folder.
 
 ### MINIMAL REQUIREMENTS
 * Digital Factory 7.1.0.1

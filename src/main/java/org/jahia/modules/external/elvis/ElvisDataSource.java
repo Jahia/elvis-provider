@@ -84,11 +84,20 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                         if (searchJsonArray.length() > 0) {
                             JSONObject element = searchJsonArray.getJSONObject(0);
                             JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
-                            String elPath = elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH);
-                            String fileSize = elMetadata.has(ElvisConstants.PROPERTY_FILE_SIZE) ? elMetadata.getJSONObject(ElvisConstants.PROPERTY_FILE_SIZE).getString("value") : "-1";
-                            String downloadUrl = element.getString(ElvisConstants.PROPERTY_ORIGINAL_URL);
-                            String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : "file";
-                            return createExternalFile(element, elMetadata, elPath, fileSize, downloadUrl, assetDomain);
+                            // Check if it's not a collection
+                            if (!elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN).equals("container")) {
+                                String elPath = elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH);
+                                String fileSize = elMetadata.has(ElvisConstants.PROPERTY_FILE_SIZE) ? elMetadata.getJSONObject(ElvisConstants.PROPERTY_FILE_SIZE).getString("value") : "-1";
+                                String downloadUrl = element.getString(ElvisConstants.PROPERTY_ORIGINAL_URL);
+                                String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : "file";
+                                return createExternalFile(element, elMetadata, elPath, fileSize, downloadUrl, assetDomain);
+                            } else {
+                                // For now collection are display as empty folder to avoid StackTrace in the tomcat console
+                                ExternalFile externalCollection = new ExternalFile(ExternalFile.FileType.FOLDER, ElvisUtils.encodeDecodeSpecialCharacters(pathToUse, true), null, null);
+                                externalCollection.setMixin(Collections.singletonList(ElvisConstants.ELVISMIX_COLLECTION));
+                                externalCollection.getProperties().put("collectionIdentifier", new String[]{element.getString("id")});
+                                return externalCollection;
+                            }
                         } else {
                             String parentPath = StringUtils.substringBeforeLast(pathToUse, "/");
                             JSONArray jsonArray = elvisSession.getChildrenFolders(parentPath);
@@ -112,46 +121,49 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     }
 
     @Override
-    public List<ExternalFile> getChildrenFiles(String path) throws RepositoryException {
-        final String pathToUse = ElvisUtils.encodeDecodeSpecialCharacters(path, false);
+    public List<ExternalFile> getChildrenFiles(final ExternalFile externalFile) throws RepositoryException {
+        final String pathToUse = ElvisUtils.encodeDecodeSpecialCharacters(externalFile.getPath(), false);
         List<ExternalFile> childrenList = new ArrayList<>();
-        List<ExternalFile> externalFolders = elvisSession.execute(new BaseElvisActionCallback<List<ExternalFile>>(elvisSession) {
-            @Override
-            public List<ExternalFile> doInElvis() throws Exception {
-                List<ExternalFile> folders = new ArrayList<>();
-                JSONArray jsonArray = elvisSession.getChildrenFolders(pathToUse);
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    JSONObject element = jsonArray.getJSONObject(i);
-                    folders.add(new ExternalFile(ExternalFile.FileType.FOLDER, ElvisUtils.encodeDecodeSpecialCharacters(element.getString(ElvisConstants.PROPERTY_ASSET_PATH), true), null, null));
-                }
-                return folders;
-            }
-        });
-        childrenList.addAll(externalFolders);
-
-        List<ExternalFile> externalFiles = elvisSession.execute(new BaseElvisActionCallback<List<ExternalFile>>(elvisSession) {
-            @Override
-            public List<ExternalFile> doInElvis() throws Exception {
-                List<ExternalFile> files = new ArrayList<>();
-                JSONArray searchJsonArray = elvisSession.getChildrenFiles(pathToUse);
-                for (int i = 0; i < searchJsonArray.length(); i++) {
-                    JSONObject element = searchJsonArray.getJSONObject(i);
-                    JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
-                    String elPath = elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH);
-                    String fileSize = elMetadata.has(ElvisConstants.PROPERTY_FILE_SIZE) ? elMetadata.getJSONObject(ElvisConstants.PROPERTY_FILE_SIZE).getString("value") : "-1";
-                    String downloadUrl = element.getString(ElvisConstants.PROPERTY_ORIGINAL_URL);
-                    String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : "file";
-
-                    files.add(createExternalFile(element, elMetadata, elPath, fileSize, downloadUrl, assetDomain));
-
-                    if (elvisSession.usePreview() && (assetDomain.equals("image") || assetDomain.equals("video"))) {
-                        addPreviewExternalFiles(files, element, elMetadata, assetDomain);
+        // if the current file is an ElvisConstants.ELVISMIX_COLLECTION we will return an empty list
+        if (externalFile.getMixin() == null || (externalFile.getMixin() != null && !externalFile.getMixin().contains(ElvisConstants.ELVISMIX_COLLECTION))) {
+            List<ExternalFile> externalFolders = elvisSession.execute(new BaseElvisActionCallback<List<ExternalFile>>(elvisSession) {
+                @Override
+                public List<ExternalFile> doInElvis() throws Exception {
+                    List<ExternalFile> folders = new ArrayList<>();
+                    JSONArray jsonArray = elvisSession.getChildrenFolders(pathToUse);
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject element = jsonArray.getJSONObject(i);
+                        folders.add(new ExternalFile(ExternalFile.FileType.FOLDER, ElvisUtils.encodeDecodeSpecialCharacters(element.getString(ElvisConstants.PROPERTY_ASSET_PATH), true), null, null));
                     }
+                    return folders;
                 }
-                return files;
-            }
-        });
-        childrenList.addAll(externalFiles);
+            });
+            childrenList.addAll(externalFolders);
+
+            List<ExternalFile> externalFiles = elvisSession.execute(new BaseElvisActionCallback<List<ExternalFile>>(elvisSession) {
+                @Override
+                public List<ExternalFile> doInElvis() throws Exception {
+                    List<ExternalFile> files = new ArrayList<>();
+                    JSONArray searchJsonArray = elvisSession.getChildrenFiles(pathToUse);
+                    for (int i = 0; i < searchJsonArray.length(); i++) {
+                        JSONObject element = searchJsonArray.getJSONObject(i);
+                        JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
+                        String elPath = elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH);
+                        String fileSize = elMetadata.has(ElvisConstants.PROPERTY_FILE_SIZE) ? elMetadata.getJSONObject(ElvisConstants.PROPERTY_FILE_SIZE).getString("value") : "-1";
+                        String downloadUrl = element.getString(ElvisConstants.PROPERTY_ORIGINAL_URL);
+                        String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : "file";
+
+                        files.add(createExternalFile(element, elMetadata, elPath, fileSize, downloadUrl, assetDomain));
+
+                        if (elvisSession.usePreview() && (assetDomain.equals("image") || assetDomain.equals("video"))) {
+                            addPreviewExternalFiles(files, element, elMetadata, assetDomain);
+                        }
+                    }
+                    return files;
+                }
+            });
+            childrenList.addAll(externalFiles);
+        }
 
         return childrenList;
     }

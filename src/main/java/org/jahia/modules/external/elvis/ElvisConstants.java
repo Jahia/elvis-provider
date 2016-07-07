@@ -29,7 +29,8 @@ package org.jahia.modules.external.elvis;
 public class ElvisConstants {
     public static String ELVISMIX_FILE = "elvismix:file";
     public static String ELVISMIX_PREVIEW_FILE = "elvismix:previewFile";
-    
+    public static String ELVISMIX_COLLECTION = "elvismix:collection";
+
     public static String EPF_FORMAT = "_EPF-FORMAT_";
     public static String EP_PREVIEW_F = "ED-preview-F";
 
