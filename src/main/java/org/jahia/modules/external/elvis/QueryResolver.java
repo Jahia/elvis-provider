@@ -26,7 +26,6 @@ package org.jahia.modules.external.elvis;
 import org.apache.jackrabbit.commons.query.qom.Operator;
 import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalQuery;
-import org.jahia.utils.WebUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,9 +97,6 @@ public class QueryResolver {
             }
         }
 
-        // Set limit
-        buff.append("&num=").append(query.getLimit());
-
         return buff.toString();
     }
 
@@ -167,28 +163,28 @@ public class QueryResolver {
                         return FALSE;
                     case "jcr.operator.greater.than":
                         if (op1.equals("assetCreated") || op1.equals("assetModified")) {
-                            buff.append(WebUtils.escapePath("{")).append(op2).append(WebUtils.escapePath(" TO *}"));
+                            buff.append("{").append(op2).append(" TO *}");
                             break;
                         } else {
                             return FALSE;
                         }
                     case "jcr.operator.greater.than.or.equal.to":
                         if (op1.equals("assetCreated") || op1.equals("assetModified")) {
-                            buff.append(WebUtils.escapePath("[")).append(op2).append(WebUtils.escapePath(" TO *]"));
+                            buff.append("[").append(op2).append(" TO *]");
                         } else {
                             buff.append(op2);
                         }
                         break;
                     case "jcr.operator.less.than":
                         if (op1.equals("assetCreated") || op1.equals("assetModified")) {
-                            buff.append(WebUtils.escapePath("{* TO ")).append(op2).append(WebUtils.escapePath("}"));
+                            buff.append("{* TO ").append(op2).append("}");
                             break;
                         } else {
                             return FALSE;
                         }
                     case "jcr.operator.less.than.or.equal.to":
                         if (op1.equals("assetCreated") || op1.equals("assetModified")) {
-                            buff.append(WebUtils.escapePath("[ * TO ")).append(op2).append(WebUtils.escapePath("]"));
+                            buff.append("[ * TO ").append(op2).append("]");
                         } else {
                             buff.append(op2);
                         }
@@ -275,14 +271,14 @@ public class QueryResolver {
                     buff.append(val.getBoolean());
                     break;
                 case PropertyType.STRING:
-                    buff.append(WebUtils.escapePath(stringVal));
+                    buff.append(stringVal);
                     break;
                 case PropertyType.DATE:
-                    buff.append(WebUtils.escapePath(stringVal));
+                    buff.append(stringVal);
                     break;
                 case PropertyType.NAME:
                 case PropertyType.PATH:
-                    buff.append(WebUtils.escapePath("\"" + stringVal + "\""));
+                    buff.append("\"").append(stringVal).append("\"");
                 case PropertyType.REFERENCE:
                 case PropertyType.WEAKREFERENCE:
                 case PropertyType.URI:

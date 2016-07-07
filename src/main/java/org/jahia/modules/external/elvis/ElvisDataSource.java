@@ -24,14 +24,11 @@
 package org.jahia.modules.external.elvis;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.util.EntityUtils;
 import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalDataSource;
 import org.jahia.modules.external.ExternalQuery;
 import org.jahia.modules.external.elvis.communication.BaseElvisActionCallback;
 import org.jahia.modules.external.elvis.communication.ElvisSession;
-import org.jahia.utils.WebUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -83,8 +80,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 return elvisSession.execute(new BaseElvisActionCallback<ExternalFile>(elvisSession) {
                     @Override
                     public ExternalFile doInElvis() throws Exception {
-                        CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + pathToUse + "\""));
-                        JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                        JSONArray searchJsonArray = elvisSession.getFile(pathToUse);
                         if (searchJsonArray.length() > 0) {
                             JSONObject element = searchJsonArray.getJSONObject(0);
                             JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
@@ -95,8 +91,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                             return createExternalFile(element, elMetadata, elPath, fileSize, downloadUrl, assetDomain);
                         } else {
                             String parentPath = StringUtils.substringBeforeLast(pathToUse, "/");
-                            CloseableHttpResponse browseResponse = elvisSession.getDataFromApi("/browse?path=" + WebUtils.escapePath(parentPath));
-                            JSONArray jsonArray = getBrowseResponse(browseResponse);
+                            JSONArray jsonArray = elvisSession.getChildrenFolders(parentPath);
                             for (int i = 0; i < jsonArray.length(); i++) {
                                 JSONObject element = jsonArray.getJSONObject(i);
                                 if (element.getString(ElvisConstants.PROPERTY_ASSET_PATH).equals(pathToUse)) {
@@ -118,15 +113,13 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     @Override
     public List<ExternalFile> getChildrenFiles(String path) throws RepositoryException {
-        path = ElvisUtils.encodeDecodeSpecialCharacters(path, false);
+        final String pathToUse = ElvisUtils.encodeDecodeSpecialCharacters(path, false);
         List<ExternalFile> childrenList = new ArrayList<>();
-        final String pathToUse = path;
         List<ExternalFile> externalFolders = elvisSession.execute(new BaseElvisActionCallback<List<ExternalFile>>(elvisSession) {
             @Override
             public List<ExternalFile> doInElvis() throws Exception {
                 List<ExternalFile> folders = new ArrayList<>();
-                CloseableHttpResponse browseResponse = elvisSession.getDataFromApi("/browse?path=" + WebUtils.escapePath(pathToUse));
-                JSONArray jsonArray = getBrowseResponse(browseResponse);
+                JSONArray jsonArray = elvisSession.getChildrenFolders(pathToUse);
                 for (int i = 0; i < jsonArray.length(); i++) {
                     JSONObject element = jsonArray.getJSONObject(i);
                     folders.add(new ExternalFile(ExternalFile.FileType.FOLDER, ElvisUtils.encodeDecodeSpecialCharacters(element.getString(ElvisConstants.PROPERTY_ASSET_PATH), true), null, null));
@@ -140,8 +133,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
             @Override
             public List<ExternalFile> doInElvis() throws Exception {
                 List<ExternalFile> files = new ArrayList<>();
-                CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=folderPath:" + WebUtils.escapePath("\"" + pathToUse + "\"") + "&num=" + elvisSession.getFileLimit());
-                JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                JSONArray searchJsonArray = elvisSession.getChildrenFiles(pathToUse);
                 for (int i = 0; i < searchJsonArray.length(); i++) {
                     JSONObject element = searchJsonArray.getJSONObject(i);
                     JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
@@ -195,23 +187,24 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     @Override
     public List<String> search(ExternalQuery query) throws RepositoryException {
         QueryResolver queryResolver = new QueryResolver(this, query);
-        final String sql = queryResolver.resolve();
+        final String elvisQuery = queryResolver.resolve();
 
         // Not mapped or unsupported queries treated as empty.
-        if (StringUtils.isBlank(sql)) {
+        if (StringUtils.isBlank(elvisQuery)) {
             return Collections.emptyList();
         }
 
+        final Long queryLimit = query.getLimit();
+
         if (logger.isDebugEnabled()) {
-            logger.debug("Elvis query " + sql);
+            logger.debug("Elvis query " + elvisQuery);
         }
 
         return elvisSession.execute(new BaseElvisActionCallback<List<String>>(elvisSession) {
             @Override
             public List<String> doInElvis() throws Exception {
                 List<String> pathList = new ArrayList<>();
-                CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=" + sql);
-                JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                JSONArray searchJsonArray = elvisSession.search(elvisQuery, queryLimit.toString());
                 for (int i = 0; i < searchJsonArray.length(); i++) {
                     JSONObject element = searchJsonArray.getJSONObject(i);
                     JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
@@ -246,33 +239,6 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     public ElvisSession getElvisSession() {
         return elvisSession;
-    }
-
-    private JSONArray getBrowseResponse(CloseableHttpResponse browseResponse) throws Exception {
-        if (browseResponse.getStatusLine().getStatusCode() == 200) {
-            String jsonString = EntityUtils.toString(browseResponse.getEntity());
-            try {
-                return new JSONArray(jsonString);
-            } catch (JSONException e) {
-                throw new JSONException(jsonString);
-            }
-        }
-        throw new RepositoryException("The request was not correctly executed please check your Elvis API Server");
-    }
-
-    private JSONArray getHitsInSearchResponse(CloseableHttpResponse searchResponse) throws Exception {
-        if (searchResponse.getStatusLine().getStatusCode() == 200) {
-            String jsonString = EntityUtils.toString(searchResponse.getEntity());
-            JSONObject jsonObject = new JSONObject(jsonString);
-            if (!jsonObject.has("errorcode")) {
-                if (jsonObject.has("hits")) {
-                    return jsonObject.getJSONArray("hits");
-                }
-            } else {
-                throw new JSONException(jsonString);
-            }
-        }
-        throw new RepositoryException("The request was not correctly executed please check your Elvis API Server");
     }
 
     private ExternalFile createExternalFile(JSONObject element, JSONObject elMetadata, String elPath, String fileSize, String downloadUrl, String assetDomain) throws JSONException {
@@ -346,8 +312,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
             return elvisSession.execute(new BaseElvisActionCallback<ExternalFile>(elvisSession) {
                 @Override
                 public ExternalFile doInElvis() throws Exception {
-                    CloseableHttpResponse searchResponse = elvisSession.getDataFromApi("/search?q=assetPath:" + WebUtils.escapePath("\"" + pathToUse + "\""));
-                    JSONArray searchJsonArray = getHitsInSearchResponse(searchResponse);
+                    JSONArray searchJsonArray = elvisSession.getFile(pathToUse);
                     if (searchJsonArray.length() > 0) {
                         JSONObject element = searchJsonArray.getJSONObject(0);
                         JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);

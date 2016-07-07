@@ -24,8 +24,6 @@
 package org.jahia.modules.external.elvis.rules;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.util.EntityUtils;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.jahia.api.Constants;
@@ -40,14 +38,11 @@ import org.jahia.modules.external.elvis.decorator.ElvisMountPointNode;
 import org.jahia.services.content.*;
 import org.jahia.services.content.rules.ChangedPropertyFact;
 import org.jahia.settings.SettingsBean;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jcr.PropertyType;
 import javax.jcr.RepositoryException;
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -104,8 +99,7 @@ public class ElvisRulesService {
                         updatedMetaData = elvisSession.execute(new BaseElvisActionCallback<Boolean>(elvisSession) {
                             @Override
                             public Boolean doInElvis() throws Exception {
-                                CloseableHttpResponse response = elvisSession.writeAssetUsageInElvis(assetPath, pageUrl, true);
-                                return checkResponse(response);
+                                return elvisSession.updateBulk(assetPath, pageUrl, true);
                             }
                         });
                         if (!updatedMetaData) {
@@ -191,8 +185,7 @@ public class ElvisRulesService {
                         updatedMetaData = elvisSession.execute(new BaseElvisActionCallback<Boolean>(elvisSession) {
                             @Override
                             public Boolean doInElvis() throws Exception {
-                                CloseableHttpResponse response = elvisSession.writeAssetUsageInElvis(assetPath, pageUrl, false);
-                                return checkResponse(response);
+                                return elvisSession.updateBulk(assetPath, pageUrl, false);
                             }
                         });
                         if (!updatedMetaData) {
@@ -204,19 +197,5 @@ public class ElvisRulesService {
             });
         }
         hibernateSession.getTransaction().commit();
-    }
-
-    private Boolean checkResponse(CloseableHttpResponse response) throws IOException, JSONException, RepositoryException {
-        if (response.getStatusLine().getStatusCode() == 200) {
-            String jsonString = EntityUtils.toString(response.getEntity());
-            JSONObject jsonObject = new JSONObject(jsonString);
-            if (jsonObject.has("errorcode")) {
-                throw new JSONException(jsonString);
-            }
-            return jsonObject.has("processedCount") && jsonObject.getInt("processedCount") == 1
-                    && jsonObject.has("errorCount") && jsonObject.getInt("errorCount") == 0;
-        } else {
-            throw new RepositoryException("The request was not correctly executed please check your Elvis API Server");
-        }
     }
 }

@@ -43,6 +43,16 @@
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
                 <bean p:elvisName="height" p:jcrName="j:height"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="colorSpace" p:jcrName="j:colorSpace"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="orientation" p:jcrName="j:orientation"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="resolutionUnit" p:jcrName="j:resolutionUnit"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="resolutionX" p:jcrName="j:xresolution"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="resolutionY" p:jcrName="j:yresolution"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
             </list>
         </property>
     </bean>
