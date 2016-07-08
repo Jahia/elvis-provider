@@ -16,7 +16,7 @@ By default the module as a default mapping for all files and three extended mapp
 It is possible to add properties to those mapping by just updating the `spring.xml`, it is also possible to add new mappings, to do that just follow the pattern of the existing mappings.
 
 *e.g* if you want to add a property to the default mapping, you need to copy this line and modify `p:elvisName`, `p:jcrName` and `p:elvisType` with the name of the property you want to add  
-For this value `p:elvisType` it can be easier `string` or `array`, `map` is not managed currently, so the two field that are actually `map` are specifically managed. 
+For this value `p:elvisType` it can be either `string` or `array`, `map` is not managed currently, so the two field that are actually `map` are specifically managed. 
 ```xml
     <bean p:elvisName="mimeType" p:jcrName="jcr:mimeType" p:elvisType="string"
       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
