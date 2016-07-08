@@ -6,7 +6,7 @@
                            http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
 
     <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" id="elvisFile"
-          p:jcrMixins="elvismix:file" p:elvisName="file">
+          p:jcrMixins="elvismix:file elvismix:customMetaData" p:elvisName="file">
         <property name="properties">
             <list>
                 <bean p:elvisName="description" p:jcrName="jcr:description"
@@ -37,6 +37,28 @@
 
                 <bean p:elvisName="tags" p:jcrName="j:tagList"
                       p:elvisType="array"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+
+                <bean p:elvisName="cf_descShort" p:jcrName="cf_descShort"
+                      p:elvisType="array"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="cf_collection" p:jcrName="cf_collection"
+                      p:elvisType="array"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="cf_brand" p:jcrName="cf_brand"
+                      p:elvisType="array"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="cf_finish" p:jcrName="cf_finish"
+                      p:elvisType="array"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="cf_productTags" p:jcrName="cf_productTags"
+                      p:elvisType="array"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="cf_modelNumber" p:jcrName="cf_modelNumber"
+                      p:elvisType="array"
+                      class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
+                <bean p:elvisName="cf_assetType" p:jcrName="cf_assetType"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
             </list>
         </property>
