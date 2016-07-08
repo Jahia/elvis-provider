@@ -30,6 +30,7 @@ public class ElvisConstants {
     public static String ELVISMIX_FILE = "elvismix:file";
     public static String ELVISMIX_PREVIEW_FILE = "elvismix:previewFile";
     public static String ELVISMIX_COLLECTION = "elvismix:collection";
+    public static String ELVISMIX_CUSTOM_META_DATA = "elvismix:customMetaData";
     public static String DEFAULT_ELVIS_TYPE_NAME = "file";
 
     public static String EPF_FORMAT = "_EPF-FORMAT_";
