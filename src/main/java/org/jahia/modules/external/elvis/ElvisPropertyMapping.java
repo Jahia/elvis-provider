@@ -32,13 +32,15 @@ package org.jahia.modules.external.elvis;
 public class ElvisPropertyMapping {
     private String jcrName;
     private String elvisName;
+    private String elvisType;
 
     public ElvisPropertyMapping() {
     }
 
-    public ElvisPropertyMapping(String jcrName, String elvisName) {
+    public ElvisPropertyMapping(String jcrName, String elvisName, String elvisType) {
         this.jcrName = jcrName;
         this.elvisName = elvisName;
+        this.elvisType = elvisType;
     }
 
     public String getJcrName() {
@@ -56,4 +58,12 @@ public class ElvisPropertyMapping {
 	public void setElvisName(String elvisName) {
 		this.elvisName = elvisName;
 	}
+
+    public String getElvisType() {
+        return elvisType;
+    }
+
+    public void setElvisType(String type) {
+        this.elvisType = type;
+    }
 }

@@ -60,6 +60,9 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 supportedNodeTypes.add(nodeTypes);
             }
         }
+
+        // Add jmix:tagged as it is out of the mapping, because conditional!
+        supportedNodeTypes.add(Constants.JAHIAMIX_TAGGED);
         return supportedNodeTypes;
     }
 
@@ -89,7 +92,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                                 String elPath = elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH);
                                 String fileSize = elMetadata.has(ElvisConstants.PROPERTY_FILE_SIZE) ? elMetadata.getJSONObject(ElvisConstants.PROPERTY_FILE_SIZE).getString("value") : "-1";
                                 String downloadUrl = element.getString(ElvisConstants.PROPERTY_ORIGINAL_URL);
-                                String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : "file";
+                                String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : ElvisConstants.DEFAULT_ELVIS_TYPE_NAME;
                                 return createExternalFile(element, elMetadata, elPath, fileSize, downloadUrl, assetDomain);
                             } else {
                                 // For now collection are display as empty folder to avoid StackTrace in the tomcat console
@@ -151,7 +154,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                         String elPath = elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH);
                         String fileSize = elMetadata.has(ElvisConstants.PROPERTY_FILE_SIZE) ? elMetadata.getJSONObject(ElvisConstants.PROPERTY_FILE_SIZE).getString("value") : "-1";
                         String downloadUrl = element.getString(ElvisConstants.PROPERTY_ORIGINAL_URL);
-                        String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : "file";
+                        String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : ElvisConstants.DEFAULT_ELVIS_TYPE_NAME;
 
                         files.add(createExternalFile(element, elMetadata, elPath, fileSize, downloadUrl, assetDomain));
 
@@ -221,7 +224,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                     JSONObject element = searchJsonArray.getJSONObject(i);
                     JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
 
-                    String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : "file";
+                    String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : ElvisConstants.DEFAULT_ELVIS_TYPE_NAME;
                     if (elvisSession.usePreview() && (assetDomain.equals("image") || assetDomain.equals("video"))) {
                         if (elvisSession.getPreviewSettings().containsKey(assetDomain) && !elvisSession.getPreviewSettings().get(assetDomain).isEmpty()) {
                             for (Map<String, String> previewParameters : elvisSession.getPreviewSettings().get(assetDomain)) {
@@ -264,44 +267,40 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
             externalFile.getProperties().put(ElvisConstants.PROPERTY_THUMBNAIL_URL, new String[]{element.getString(ElvisConstants.PROPERTY_THUMBNAIL_URL)});
         }
 
-        // If different than default type jnt:file getJcrName which should be the mixin e.g jmix:image
+        // If different than default type jnt:file getJcrMixins which should be the mixin e.g jmix:image
         List<String> mixins = new ArrayList<>();
-        mixins.add(ElvisConstants.ELVISMIX_FILE);
         if (elMetadata.has("tags")) {
             mixins.add(Constants.JAHIAMIX_TAGGED);
         }
 
-        List<ElvisTypeMapping> elvisTypesMapping = configuration.getTypeByElvisName(assetDomain);
+        ElvisTypeMapping elvisTypeMapping = configuration.getTypeByElvisName(assetDomain);
+        mixins.addAll(elvisTypeMapping.getJcrMixins());
 
-        if (!assetDomain.equals("file")) {
-            for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
-                if (!elvisTypeMapping.getJcrName().contains(Constants.JAHIANT_FILE)) {
-                    mixins.addAll(elvisTypeMapping.getJcrName());
-                }
-            }
+        if (!assetDomain.equals(ElvisConstants.DEFAULT_ELVIS_TYPE_NAME)) {
+            ElvisTypeMapping elvisDefaultTypeMapping = configuration.getTypeByElvisName(ElvisConstants.DEFAULT_ELVIS_TYPE_NAME);
+            mixins.addAll(elvisDefaultTypeMapping.getJcrMixins());
         }
 
-        for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
-            for (ElvisPropertyMapping propertyMapping : elvisTypeMapping.getProperties()) {
-                String elvisName = propertyMapping.getElvisName();
-                String jcrName = propertyMapping.getJcrName();
-                if (elMetadata.has(elvisName) && !externalFile.getProperties().containsKey(jcrName)) {
-                    // Property [jcr:created] and [jcr:modified] are set at the ExternalFile instantiation, the [jcr:mymeType] is need to be set as content type also and jcr:content is not exactly a property but is used as a property for the search
-                    if (!jcrName.equals(Constants.JCR_CREATED) && !jcrName.equals(Constants.JCR_LASTMODIFIED)
-                            && !jcrName.equals(Constants.JCR_MIMETYPE) && !jcrName.equals(Constants.JCR_CONTENT)
-                            && !jcrName.equals("j:tagList")) {
+        for (ElvisPropertyMapping propertyMapping : elvisTypeMapping.getProperties()) {
+            String elvisName = propertyMapping.getElvisName();
+            String jcrName = propertyMapping.getJcrName();
+            String elvisType = propertyMapping.getElvisType();
+            if (elMetadata.has(elvisName) && !externalFile.getProperties().containsKey(jcrName)) {
+                // Property [jcr:created] and [jcr:modified] are set at the ExternalFile instantiation, the [jcr:mymeType] is need to be set as content type also and jcr:content is not exactly a property but is used as a property for the search
+                if (!jcrName.equals(Constants.JCR_CREATED) && !jcrName.equals(Constants.JCR_LASTMODIFIED)
+                        && !jcrName.equals(Constants.JCR_CONTENT)) {
+                    if (elvisType.equals("string")) {
                         externalFile.getProperties().put(jcrName, new String[]{elMetadata.getString(elvisName)});
-                    } else if (jcrName.equals(Constants.JCR_MIMETYPE)) {
-                        String mimeType = elMetadata.getString(elvisName);
-                        externalFile.getProperties().put(Constants.JCR_MIMETYPE, new String[]{mimeType});
-                        externalFile.setContentType(mimeType);
-                    } else if (jcrName.equals("j:tagList")) {
-                        JSONArray tags = elMetadata.getJSONArray(elvisName);
-                        String[] tagList = new String[tags.length()];
-                        for (int i = 0; i < tags.length(); i++) {
-                            tagList[i] = tags.getString(i);
+                        if (jcrName.equals(Constants.JCR_MIMETYPE)) {
+                            externalFile.setContentType(elMetadata.getString(elvisName));
                         }
-                        externalFile.getProperties().put("j:tagList", tagList);
+                    } else if (elvisType.equals("array")) {
+                        JSONArray jsonArray = elMetadata.getJSONArray(elvisName);
+                        String[] stringArray = new String[jsonArray.length()];
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            stringArray[i] = jsonArray.getString(i);
+                        }
+                        externalFile.getProperties().put(jcrName, stringArray);
                     }
                 }
             }

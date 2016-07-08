@@ -34,7 +34,6 @@ import javax.jcr.RepositoryException;
 import javax.jcr.UnsupportedRepositoryOperationException;
 import javax.jcr.Value;
 import javax.jcr.query.qom.*;
-import java.util.List;
 
 /**
  * @author Damien GAILLARD
@@ -47,7 +46,7 @@ public class QueryResolver {
 
     private ExternalQuery query;
     private ElvisConfiguration configuration;
-    private List<ElvisTypeMapping> elvisTypesMapping;
+    private ElvisTypeMapping elvisTypesMapping;
 
     public QueryResolver(ElvisDataSource dataSource, ExternalQuery query) {
         this.query = query;
@@ -72,19 +71,14 @@ public class QueryResolver {
         }
 
         elvisTypesMapping = configuration.getTypeByJCRName(nodeTypeName);
-        if (elvisTypesMapping == null || elvisTypesMapping.isEmpty()) {
+        if (elvisTypesMapping == null) {
             logger.debug("Unmapped types not supported in Elvis queries");
             return null;
         }
 
         if (!nodeTypeName.equals(Constants.JAHIANT_FILE)) {
             buff.append("(");
-            for (int i = 0 ; i < elvisTypesMapping.size() ; i++) {
-                if (i > 0) {
-                    buff.append("OR");
-                }
-                buff.append("assetDomain:").append(elvisTypesMapping.get(i).getElvisNameAsQueryString());
-            }
+            buff.append("assetDomain:").append(elvisTypesMapping.getElvisNameAsQueryString());
             buff.append(")");
         }
 
@@ -293,10 +287,8 @@ public class QueryResolver {
     }
 
     private void addMappedProperty(StringBuffer buff, String propertyName) throws NotMappedElvisProperty {
-        ElvisPropertyMapping propertyByJCR = null;
-        for (ElvisTypeMapping elvisTypeMapping : elvisTypesMapping) {
-            propertyByJCR = elvisTypeMapping.getPropertyByJCR(propertyName);
-        }
+        ElvisPropertyMapping propertyByJCR = elvisTypesMapping.getPropertyByJCR(propertyName);
+
         if (propertyByJCR == null) {
             throw new NotMappedElvisProperty(propertyName);
         }

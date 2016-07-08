@@ -6,61 +6,77 @@
                            http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
 
     <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" id="elvisFile"
-          p:jcrName="jnt:file,elvismix:file" p:elvisName="file">
+          p:jcrMixins="elvismix:file" p:elvisName="file">
         <property name="properties">
             <list>
                 <bean p:elvisName="description" p:jcrName="jcr:description"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
 
                 <bean p:elvisName="assetCreator" p:jcrName="jcr:createdBy"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
                 <bean p:elvisName="assetCreated" p:jcrName="jcr:created"
+                      p:elvisType="map"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
 
                 <bean p:elvisName="assetModifier" p:jcrName="jcr:lastModifiedBy"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
                 <bean p:elvisName="assetModified" p:jcrName="jcr:lastModified"
+                      p:elvisType="map"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
 
                 <bean p:elvisName="mimeType" p:jcrName="jcr:mimeType"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
 
                 <bean p:elvisName="textContent" p:jcrName="jcr:content"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
 
                 <bean p:elvisName="tags" p:jcrName="j:tagList"
+                      p:elvisType="array"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
             </list>
         </property>
     </bean>
 
     <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" parent="elvisFile" id="elvisImage"
-          p:jcrName="jmix:image,jmix:exif" p:elvisName="image">
+          p:jcrMixins="jmix:image jmix:exif" p:elvisName="image">
         <property name="properties">
             <list merge="true">
                 <bean p:elvisName="width" p:jcrName="j:width"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
                 <bean p:elvisName="height" p:jcrName="j:height"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
                 <bean p:elvisName="colorSpace" p:jcrName="j:colorSpace"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
                 <bean p:elvisName="orientation" p:jcrName="j:orientation"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
                 <bean p:elvisName="resolutionUnit" p:jcrName="j:resolutionUnit"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
                 <bean p:elvisName="resolutionX" p:jcrName="j:xresolution"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
                 <bean p:elvisName="resolutionY" p:jcrName="j:yresolution"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
             </list>
         </property>
     </bean>
 
     <bean class="org.jahia.modules.external.elvis.ElvisTypeMapping" parent="elvisFile" id="elvisDocument"
-          p:jcrName="jmix:document" p:elvisName="document,pdf">
+          p:jcrMixins="jmix:document" p:elvisName="document pdf">
         <property name="properties">
             <list merge="true">
                 <bean p:elvisName="numberOfPages" p:jcrName="j:pageCount"
+                      p:elvisType="string"
                       class="org.jahia.modules.external.elvis.ElvisPropertyMapping"/>
             </list>
         </property>
