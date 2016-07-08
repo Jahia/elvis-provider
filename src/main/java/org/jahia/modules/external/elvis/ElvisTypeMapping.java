@@ -31,7 +31,7 @@ import java.util.*;
  * @author Damien GAILLARD
  */
 public class ElvisTypeMapping implements Cloneable {
-    private List<String> jcrName;
+    private List<String> jcrMixins;
     private List<String> elvisName;
     private List<ElvisPropertyMapping> properties;
     private Map<String, ElvisPropertyMapping> propertiesMapJCR;
@@ -39,17 +39,17 @@ public class ElvisTypeMapping implements Cloneable {
 
     public ElvisTypeMapping() {}
 
-    public ElvisTypeMapping(List<String> jcrName, List<String> elvisName) {
-        this.jcrName = jcrName;
+    public ElvisTypeMapping(List<String> jcrMixins, List<String> elvisName) {
+        this.jcrMixins = jcrMixins;
         this.elvisName = elvisName;
     }
 
-    public List<String> getJcrName() {
-        return jcrName;
+    public List<String> getJcrMixins() {
+        return jcrMixins;
     }
 
-    public void setJcrName(String jcrName) {
-        this.jcrName = Arrays.asList(jcrName.split("\\s*,\\s*"));
+    public void setJcrMixins(String jcrName) {
+        this.jcrMixins = Arrays.asList(jcrName.split(" "));
     }
 
     public List<String> getElvisName() {
@@ -60,7 +60,7 @@ public class ElvisTypeMapping implements Cloneable {
         String elvisNameAsString = "";
         for (int i = 0 ; i < elvisName.size() ; i++) {
             if (i != 0) {
-                elvisNameAsString += "%20OR%20";
+                elvisNameAsString += " OR ";
             }
             elvisNameAsString += elvisName.get(i);
         }
@@ -68,7 +68,7 @@ public class ElvisTypeMapping implements Cloneable {
     }
 
     public void setElvisName(String elvisName) {
-        this.elvisName = Arrays.asList(elvisName.split("\\s*,\\s*"));
+        this.elvisName = Arrays.asList(elvisName.split(" "));
     }
 
     public List<ElvisPropertyMapping> getProperties() {
@@ -90,16 +90,17 @@ public class ElvisTypeMapping implements Cloneable {
     protected void initProperties() {
         HashMap<String, ElvisPropertyMapping> mapJCR = new HashMap<>();
         HashMap<String, ElvisPropertyMapping> mapElvis = new HashMap<>();
+
         if (properties != null) {
             for (ElvisPropertyMapping property : properties) {
                 mapJCR.put(property.getJcrName(), property);
                 mapElvis.put(property.getElvisName(), property);
             }
         }
+
         propertiesMapElvis = mapElvis.size() == 0 ? Collections.<String, ElvisPropertyMapping>emptyMap() : Collections.unmodifiableMap(mapElvis);
         propertiesMapJCR = mapJCR.size() == 0 ? Collections.<String, ElvisPropertyMapping>emptyMap() : Collections.unmodifiableMap(mapJCR);
     }
-
 
     @Override
     protected ElvisTypeMapping clone() {

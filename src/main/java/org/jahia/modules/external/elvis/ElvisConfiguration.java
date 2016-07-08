@@ -23,6 +23,8 @@
  */
 package org.jahia.modules.external.elvis;
 
+import org.jahia.api.Constants;
+
 import java.util.*;
 
 /**
@@ -31,14 +33,13 @@ import java.util.*;
  * @author Damien GAILLARD
  */
 public class ElvisConfiguration {
-    private static String DEFAULT_ELVIS_TYPE_NAME = "file";
     private static List<String> JCR_TYPES_LIST;
     private static List<String> ELVIS_TYPES_LIST;
-    private static List<ElvisTypeMapping> DEFAULT_ELVIS_TYPE_MAPPING;
+    private static ElvisTypeMapping DEFAULT_ELVIS_TYPE_MAPPING;
 
     private List<ElvisTypeMapping> typeMapping;
-    private Map<List<String>, List<ElvisTypeMapping>> elvisTypes;
-    private Map<List<String>, List<ElvisTypeMapping>> jcrTypes;
+    private Map<List<String>, ElvisTypeMapping> elvisTypes;
+    private Map<List<String>, ElvisTypeMapping> jcrTypes;
 
     public void onStart() {
         elvisTypes = new HashMap<>();
@@ -46,16 +47,19 @@ public class ElvisConfiguration {
         if (typeMapping != null) {
             JCR_TYPES_LIST = new ArrayList<>();
             ELVIS_TYPES_LIST = new ArrayList<>();
-            DEFAULT_ELVIS_TYPE_MAPPING = new ArrayList<>();
             for (ElvisTypeMapping elvisTypeMapping : typeMapping) {
 
                 List<String> elvisName = elvisTypeMapping.getElvisName();
                 ELVIS_TYPES_LIST.addAll(elvisName);
-                buildMap(elvisTypeMapping, elvisTypes, elvisName);
+                elvisTypes.put(elvisName, elvisTypeMapping);
 
-                List<String> jcrName = elvisTypeMapping.getJcrName();
+                List<String> jcrName = elvisTypeMapping.getJcrMixins();
                 JCR_TYPES_LIST.addAll(jcrName);
-                buildMap(elvisTypeMapping, jcrTypes, jcrName);
+                jcrTypes.put(jcrName, elvisTypeMapping);
+
+                if (elvisName.contains(ElvisConstants.DEFAULT_ELVIS_TYPE_NAME)) {
+                    DEFAULT_ELVIS_TYPE_MAPPING = elvisTypeMapping;
+                }
 
                 elvisTypeMapping.initProperties();
             }
@@ -66,22 +70,26 @@ public class ElvisConfiguration {
         this.typeMapping = typeMapping;
     }
 
-    public Map<List<String>, List<ElvisTypeMapping>> getElvisTypes() {
+    public Map<List<String>, ElvisTypeMapping> getElvisTypes() {
         return elvisTypes;
     }
 
-    public Map<List<String>, List<ElvisTypeMapping>> getJcrTypes() {
+    public Map<List<String>, ElvisTypeMapping> getJcrTypes() {
         return jcrTypes;
     }
 
-    public List<ElvisTypeMapping> getTypeByJCRName(String name) {
-        List<ElvisTypeMapping> list = new ArrayList<>();
-        for (Map.Entry<List<String>, List<ElvisTypeMapping>> entry : jcrTypes.entrySet()) {
+    public ElvisTypeMapping getTypeByJCRName(String name) {
+        if (name.equals(Constants.JAHIANT_FILE)) {
+            return DEFAULT_ELVIS_TYPE_MAPPING;
+        }
+
+        for (Map.Entry<List<String>, ElvisTypeMapping> entry : jcrTypes.entrySet()) {
             if (entry.getKey().contains(name)) {
-                list = entry.getValue();
+                return entry.getValue();
             }
         }
-        return list;
+
+        return null;
     }
 
     /**
@@ -89,37 +97,21 @@ public class ElvisConfiguration {
      * @param name  : name of the desired type
      * @return
      */
-    public List<ElvisTypeMapping> getTypeByElvisName(String name) {
-        List<ElvisTypeMapping> list = new ArrayList<>();
-
-        for (Map.Entry<List<String>, List<ElvisTypeMapping>> entry : elvisTypes.entrySet()) {
-            if (entry.getKey().contains(name)) {
-                list = entry.getValue();
-            }
-        }
-
-        if (list.isEmpty()) {
+    public ElvisTypeMapping getTypeByElvisName(String name) {
+        if (name.equals(ElvisConstants.DEFAULT_ELVIS_TYPE_NAME)) {
             return DEFAULT_ELVIS_TYPE_MAPPING;
         }
 
-        return list;
+        for (Map.Entry<List<String>, ElvisTypeMapping> entry : elvisTypes.entrySet()) {
+            if (entry.getKey().contains(name)) {
+                return entry.getValue();
+            }
+        }
+
+        return DEFAULT_ELVIS_TYPE_MAPPING;
     }
 
     public List<String> getSupportedNodeTypes() {
         return JCR_TYPES_LIST;
-    }
-
-    private void buildMap(ElvisTypeMapping elvisTypeMapping, Map<List<String>, List<ElvisTypeMapping>> map, List<String> name) {
-        if (map.containsKey(name)) {
-            map.get(name).add(elvisTypeMapping);
-        } else {
-            List<ElvisTypeMapping> list = new ArrayList<>();
-            list.add(elvisTypeMapping);
-            map.put(name, list);
-        }
-
-        if (name.contains("file")) {
-            DEFAULT_ELVIS_TYPE_MAPPING.add(elvisTypeMapping);
-        }
     }
 }
