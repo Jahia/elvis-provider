@@ -78,7 +78,7 @@ public class QueryResolver {
 
         if (!nodeTypeName.equals(Constants.JAHIANT_FILE)) {
             buff.append("(");
-            buff.append("assetDomain:").append(elvisTypesMapping.getElvisNameAsQueryString());
+            buff.append(ElvisConstants.PROPERTY_ASSET_DOMAIN).append(":").append(elvisTypesMapping.getElvisNameAsQueryString());
             buff.append(")");
         }
 
@@ -156,38 +156,35 @@ public class QueryResolver {
                     case "jcr.operator.not.equal.to":
                         return FALSE;
                     case "jcr.operator.greater.than":
-                        if (op1.equals("assetCreated") || op1.equals("assetModified")) {
+                        if (op1.equals(ElvisConstants.PROPERTY_ASSET_CREATED) || op1.equals(ElvisConstants.PROPERTY_ASSET_MODIFIED)) {
                             buff.append("{").append(op2).append(" TO *}");
                             break;
                         } else {
                             return FALSE;
                         }
                     case "jcr.operator.greater.than.or.equal.to":
-                        if (op1.equals("assetCreated") || op1.equals("assetModified")) {
+                        if (op1.equals(ElvisConstants.PROPERTY_ASSET_CREATED) || op1.equals(ElvisConstants.PROPERTY_ASSET_MODIFIED)) {
                             buff.append("[").append(op2).append(" TO *]");
                         } else {
                             buff.append(op2);
                         }
                         break;
                     case "jcr.operator.less.than":
-                        if (op1.equals("assetCreated") || op1.equals("assetModified")) {
+                        if (op1.equals(ElvisConstants.PROPERTY_ASSET_CREATED) || op1.equals(ElvisConstants.PROPERTY_ASSET_MODIFIED)) {
                             buff.append("{* TO ").append(op2).append("}");
                             break;
                         } else {
                             return FALSE;
                         }
                     case "jcr.operator.less.than.or.equal.to":
-                        if (op1.equals("assetCreated") || op1.equals("assetModified")) {
+                        if (op1.equals(ElvisConstants.PROPERTY_ASSET_CREATED) || op1.equals(ElvisConstants.PROPERTY_ASSET_MODIFIED)) {
                             buff.append("[ * TO ").append(op2).append("]");
                         } else {
                             buff.append(op2);
                         }
                         break;
                     case "jcr.operator.like":
-                        // in order to not replace wildcard % by * we need to also not replace % that might have been entered in the search
-                        op2 = op2.replace("\\%25", "_ESCAPED_QR_205_");
-                        op2 = op2.replace("%25", "*");
-                        op2 = op2.replace("_ESCAPED_QR_205_", "\\%25");
+                        op2 = op2.replace("%", "*");
                         buff.append(op2);
                         break;
                 }
