@@ -30,3 +30,13 @@
 
 [elvismix:collection] mixin
  - collectionIdentifier (string) protected
+
+[elvismix:customMetaData] mixin
+ itemtype = metadata
+ - cf_descShort (string) multiple protected
+ - cf_collection (string) multiple protected
+ - cf_brand (string) multiple protected
+ - cf_finish (string) multiple protected
+ - cf_productTags (string) multiple protected
+ - cf_modelNumber (string) multiple protected
+ - cf_assetType (string) protected
