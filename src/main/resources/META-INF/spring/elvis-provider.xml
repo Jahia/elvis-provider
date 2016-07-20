@@ -93,6 +93,11 @@
         </property>
     </bean>
 
+    <bean id="elvisCacheManager" class="org.jahia.modules.external.elvis.communication.ElvisCacheManager"
+          init-method="start" destroy-method="stop">
+        <property name="bigEhCacheProvider" ref="bigEhCacheProvider"/>
+    </bean>
+
     <bean class="org.jahia.modules.external.elvis.ElvisProviderFactory">
         <property name="reservedNodes">
             <list>
@@ -101,6 +106,7 @@
                 <value>j:conditionalVisibility</value>
             </list>
         </property>
+        <property name="elvisCacheManager" ref="elvisCacheManager"/>
     </bean>
 
     <bean class="org.jahia.services.content.decorator.JCRNodeDecoratorDefinition">

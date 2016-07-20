@@ -65,14 +65,16 @@ public class ElvisSession {
     private String baseUrl;
     private String fileLimit;
     private String fieldToWriteUsage;
+    private String mountPointPath;
     private boolean usePreview;
     private boolean trustAllCertificate;
     private Map<String, List<Map<String, String>>> previewSettings;
     private CloseableHttpClient httpClient;
     private HttpClientContext context;
+    private ElvisCacheManager elvisCacheManager;
 
     public ElvisSession(String baseUrl, String userName, String password, String fileLimit, boolean usePreview,
-                        String previewSettings, String fieldToWriteUsage, boolean trustAllCertificate) {
+                        String previewSettings, String fieldToWriteUsage, boolean trustAllCertificate, String mountPointPath, ElvisCacheManager elvisCacheManager) {
         if (baseUrl.endsWith("/")) {
             baseUrl = StringUtils.substringBeforeLast(baseUrl, "/");
         }
@@ -86,6 +88,8 @@ public class ElvisSession {
         this.previewSettings = convertJSONtoMap(previewSettings);
         this.fieldToWriteUsage = fieldToWriteUsage;
         this.trustAllCertificate = trustAllCertificate;
+        this.mountPointPath = mountPointPath;
+        this.elvisCacheManager = elvisCacheManager;
     }
 
     public <X> X execute(ElvisSessionCallback<X> callback) throws RepositoryException {
@@ -193,13 +197,19 @@ public class ElvisSession {
     /**
      * This method get the details of a file
      * @param filePath  : path of the file
+     * @param userID    : current user ID to create a cache key
      * @return JSONArray
      * @throws Exception
      */
-    public JSONArray getFile(String filePath) throws Exception {
-        List<NameValuePair> nameValuePairs = new ArrayList<>();
-        nameValuePairs.add(new BasicNameValuePair("q", "assetPath:\"" + filePath + "\""));
-        return getHitsInSearchResponse(httpPostCall("/search", nameValuePairs));
+    public JSONArray getFile(String filePath, String userID) throws Exception {
+        JSONObject element = elvisCacheManager.getLastSearchResultCacheEntry(userID + mountPointPath + filePath);
+        if (element == null) {
+            List<NameValuePair> nameValuePairs = new ArrayList<>();
+            nameValuePairs.add(new BasicNameValuePair("q", "assetPath:\"" + filePath + "\""));
+            return getHitsInSearchResponse(httpPostCall("/search", nameValuePairs));
+        } else {
+            return new JSONArray().put(element);
+        }
     }
 
     /**
@@ -253,6 +263,14 @@ public class ElvisSession {
 
     public Map<String, List<Map<String, String>>> getPreviewSettings() {
         return previewSettings;
+    }
+
+    public ElvisCacheManager getElvisCacheManager() {
+        return elvisCacheManager;
+    }
+
+    public String getMountPointPath() {
+        return mountPointPath;
     }
 
     private Map<String, List<Map<String, String>>> convertJSONtoMap(String previewSettings) {

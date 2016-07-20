@@ -26,6 +26,7 @@ package org.jahia.modules.external.elvis;
 import org.jahia.exceptions.JahiaInitializationException;
 import org.jahia.modules.external.ExternalContentStoreProvider;
 import org.jahia.modules.external.elvis.admin.MountPointFactory;
+import org.jahia.modules.external.elvis.communication.ElvisCacheManager;
 import org.jahia.modules.external.elvis.communication.ElvisSession;
 import org.jahia.services.SpringContextSingleton;
 import org.jahia.services.content.JCRNodeWrapper;
@@ -52,6 +53,7 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
 
     private ApplicationContext applicationContext;
     private List<String> reservedNodes;
+    private ElvisCacheManager elvisCacheManager;
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
@@ -68,8 +70,9 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
 
     @Override
     public JCRStoreProvider mountProvider(JCRNodeWrapper mountPoint) throws RepositoryException {
-        if (logger.isDebugEnabled())
+        if (logger.isDebugEnabled()) {
             logger.info("Elvis external provider module initialization: mountPoint.getPath() - " + mountPoint.getPath() + ", name - " + mountPoint.getName());
+        }
 
         // Define the provider basing on the mount point parameters
         ExternalContentStoreProvider externalContentStoreProvider = (ExternalContentStoreProvider) SpringContextSingleton.getBean("ExternalStoreProviderPrototype");
@@ -87,7 +90,8 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
                                                     mountPoint.getProperty(MountPointFactory.USE_PREVIEW).getBoolean(),
                                                     mountPoint.getPropertyAsString(MountPointFactory.PREVIEW_SETTINGS),
                                                     mountPoint.getPropertyAsString(MountPointFactory.FIELD_TO_WRITE_USAGE),
-                                                    mountPoint.getProperty(MountPointFactory.TRUST_ALL_CERTIFICATE).getBoolean()));
+                                                    mountPoint.getProperty(MountPointFactory.TRUST_ALL_CERTIFICATE).getBoolean(),
+                                                    mountPoint.getPath(), elvisCacheManager));
         // Start the datasource
         dataSource.start();
         // Finalize the provider setup with datasource and some JCR parameters
@@ -101,13 +105,18 @@ public class ElvisProviderFactory implements ProviderFactory, ApplicationContext
             logger.error(e.getMessage(), e);
         }
 
-        if (logger.isDebugEnabled())
+        if (logger.isDebugEnabled()) {
             logger.info("Elvis external provider module initialized");
+        }
 
         return externalContentStoreProvider;
     }
 
     public void setReservedNodes(List<String> reservedNodes) {
         this.reservedNodes = reservedNodes;
+    }
+
+    public void setElvisCacheManager(ElvisCacheManager elvisCacheManager) {
+        this.elvisCacheManager = elvisCacheManager;
     }
 }

@@ -25,6 +25,7 @@ package org.jahia.modules.external.elvis;
 
 import org.apache.commons.lang.StringUtils;
 import org.jahia.api.Constants;
+import org.jahia.modules.external.ExternalContentStoreProvider;
 import org.jahia.modules.external.ExternalDataSource;
 import org.jahia.modules.external.ExternalQuery;
 import org.jahia.modules.external.elvis.communication.BaseElvisActionCallback;
@@ -83,7 +84,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 return elvisSession.execute(new BaseElvisActionCallback<ExternalFile>(elvisSession) {
                     @Override
                     public ExternalFile doInElvis() throws Exception {
-                        JSONArray searchJsonArray = elvisSession.getFile(pathToUse);
+                        JSONArray searchJsonArray = elvisSession.getFile(pathToUse, ExternalContentStoreProvider.getCurrentSession().getUserID());
                         if (searchJsonArray.length() > 0) {
                             JSONObject element = searchJsonArray.getJSONObject(0);
                             JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
@@ -223,6 +224,8 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 for (int i = 0; i < searchJsonArray.length(); i++) {
                     JSONObject element = searchJsonArray.getJSONObject(i);
                     JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
+                    String originalFilePath = elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH);
+                    elvisSession.getElvisCacheManager().cacheLastSearchResult(element, ExternalContentStoreProvider.getCurrentSession().getUserID() + elvisSession.getMountPointPath() + originalFilePath);
 
                     String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : ElvisConstants.DEFAULT_ELVIS_TYPE_NAME;
                     if (elvisSession.usePreview() && (assetDomain.equals("image") || assetDomain.equals("video"))) {
@@ -237,7 +240,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                         }
                     }
 
-                    pathList.add(elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH));
+                    pathList.add(originalFilePath);
                 }
                 return pathList;
             }
@@ -323,7 +326,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
             return elvisSession.execute(new BaseElvisActionCallback<ExternalFile>(elvisSession) {
                 @Override
                 public ExternalFile doInElvis() throws Exception {
-                    JSONArray searchJsonArray = elvisSession.getFile(pathToUse);
+                    JSONArray searchJsonArray = elvisSession.getFile(pathToUse, ExternalContentStoreProvider.getCurrentSession().getUserID());
                     if (searchJsonArray.length() > 0) {
                         JSONObject element = searchJsonArray.getJSONObject(0);
                         JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
@@ -408,8 +411,8 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     private String buildPreviewUrl(JSONObject element, String assetDomain, Map<String, String> parameters) throws JSONException {
         String previewUrl = elvisSession.getBaseUrl() + "/preview/" + element.getString("id") +
-                            "/previews/maxWidth_" + parameters.get("maxWidth") +
-                            "_maxHeight_" + parameters.get("maxHeight");
+                "/previews/maxWidth_" + parameters.get("maxWidth") +
+                "_maxHeight_" + parameters.get("maxHeight");
         if (assetDomain.equals("image") && !parameters.get("ppi").isEmpty()) {
             previewUrl += "_ppi_" + parameters.get("ppi");
         }
