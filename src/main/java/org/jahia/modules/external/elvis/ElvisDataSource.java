@@ -276,7 +276,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
         ElvisTypeMapping elvisTypeMapping = configuration.getTypeByElvisName(assetDomain);
         mixins.addAll(elvisTypeMapping.getJcrMixins());
 
-        if (!assetDomain.equals(ElvisConstants.DEFAULT_ELVIS_TYPE_NAME)) {
+        if (!elvisTypeMapping.getElvisName().contains(ElvisConstants.DEFAULT_ELVIS_TYPE_NAME)) {
             ElvisTypeMapping elvisDefaultTypeMapping = configuration.getTypeByElvisName(ElvisConstants.DEFAULT_ELVIS_TYPE_NAME);
             mixins.addAll(elvisDefaultTypeMapping.getJcrMixins());
         }
