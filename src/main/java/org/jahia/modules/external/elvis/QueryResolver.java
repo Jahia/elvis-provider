@@ -23,6 +23,7 @@
  */
 package org.jahia.modules.external.elvis;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.jackrabbit.commons.query.qom.Operator;
 import org.jahia.api.Constants;
 import org.jahia.modules.external.ExternalQuery;
@@ -47,6 +48,8 @@ public class QueryResolver {
     private ExternalQuery query;
     private ElvisConfiguration configuration;
     private ElvisTypeMapping elvisTypesMapping;
+    private boolean isSpecificElvisNodeType;
+    private String searchedTerm;
 
     public QueryResolver(ElvisDataSource dataSource, ExternalQuery query) {
         this.query = query;
@@ -54,7 +57,7 @@ public class QueryResolver {
     }
 
     public String resolve() throws RepositoryException {
-        StringBuffer buff = new StringBuffer();
+        StringBuilder buff = new StringBuilder();
 
         Source source = query.getSource();
         if (source instanceof Join) {
@@ -64,9 +67,10 @@ public class QueryResolver {
 
         Selector selector = (Selector) source;
         String nodeTypeName = selector.getNodeTypeName();
+        isSpecificElvisNodeType = nodeTypeName.equals(ElvisConstants.ELVISMIX_FILE) || nodeTypeName.equals(ElvisConstants.ELVISMIX_CUSTOM_META_DATA);
 
         // Supports queries on hierarchyNode as file queries
-        if (nodeTypeName.equals("nt:hierarchyNode") || nodeTypeName.equals(ElvisConstants.ELVISMIX_FILE)) {
+        if (nodeTypeName.equals("nt:hierarchyNode") || isSpecificElvisNodeType) {
             nodeTypeName = Constants.JAHIANT_FILE;
         }
 
@@ -91,6 +95,22 @@ public class QueryResolver {
             } else if (buffer != TRUE) {
                 buff.append(buffer);
             }
+        }
+
+        // This is code for Delta to look into their custom meta data when performing a search in DXM and not only in the default Jahia property
+        if (!isSpecificElvisNodeType && StringUtils.isNotEmpty(searchedTerm)) {
+            boolean asPrevious = false;
+            buff.append("OR").append("(");
+            for (ElvisPropertyMapping propertyMapping : elvisTypesMapping.getProperties()) {
+                if (StringUtils.startsWith(propertyMapping.getElvisName(), "cf_")) {
+                    if (asPrevious) {
+                        buff.append("OR");
+                    }
+                    buff.append("(").append(propertyMapping.getElvisName()).append(":").append(searchedTerm).append(")");
+                    asPrevious = true;
+                }
+            }
+            buff.append(")");
         }
 
         return buff.toString();
@@ -264,6 +284,9 @@ public class QueryResolver {
                     buff.append(val.getBoolean());
                     break;
                 case PropertyType.STRING:
+                    if (StringUtils.isEmpty(searchedTerm)) {
+                        searchedTerm = stringVal;
+                    }
                     buff.append(stringVal);
                     break;
                 case PropertyType.DATE:
@@ -272,6 +295,7 @@ public class QueryResolver {
                 case PropertyType.NAME:
                 case PropertyType.PATH:
                     buff.append("\"").append(stringVal).append("\"");
+                    break;
                 case PropertyType.REFERENCE:
                 case PropertyType.WEAKREFERENCE:
                 case PropertyType.URI:
