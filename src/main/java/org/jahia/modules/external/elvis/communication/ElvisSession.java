@@ -35,9 +35,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
-import org.apache.http.impl.client.BasicCookieStore;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.*;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.util.EntityUtils;
@@ -50,6 +48,9 @@ import org.springframework.http.MediaType;
 
 import javax.jcr.RepositoryException;
 import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -101,24 +102,24 @@ public class ElvisSession {
     }
 
     public void initHttp() {
+        HttpClientBuilder httpClientBuilder = HttpClients.custom();
+        context = HttpClientContext.create();
         if (trustAllCertificate) {
             try {
-                SSLContextBuilder builder = new SSLContextBuilder();
-                builder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
-                SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(builder.build());
-                context = HttpClientContext.create();
-                CookieStore cookieStore = new BasicCookieStore();
-                context.setCookieStore(cookieStore);
-                httpClient = HttpClientBuilder.create().setDefaultCookieStore(cookieStore).setSSLSocketFactory(sslsf).build();
-            } catch (Exception e) {
+                SSLContextBuilder sslContextBuilder = new SSLContextBuilder();
+                sslContextBuilder.loadTrustMaterial(new TrustSelfSignedStrategy());
+                SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContextBuilder.build());
+                httpClientBuilder.setSSLSocketFactory(sslsf);
+            } catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException e) {
                 logger.error(e.getMessage());
             }
-        } else {
-            context = HttpClientContext.create();
-            CookieStore cookieStore = new BasicCookieStore();
-            context.setCookieStore(cookieStore);
-            httpClient = HttpClientBuilder.create().setDefaultCookieStore(cookieStore).build();
         }
+
+        CookieStore cookieStore = new BasicCookieStore();
+        context.setCookieStore(cookieStore);
+        httpClientBuilder.setDefaultCookieStore(cookieStore);
+
+        httpClient = httpClientBuilder.build();
     }
 
     public void logout() {
@@ -147,7 +148,7 @@ public class ElvisSession {
                 CloseableHttpResponse response = httpPostCall("/login", nameValuePairs);
                 return !context.getCookieStore().getCookies().isEmpty();
             } catch(IOException e) {
-                logger.error("Could not login to the ELVIS API !", e.getMessage());
+                logger.error("Could not login to the ELVIS API !", e);
                 return false;
             }
         } else {
