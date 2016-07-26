@@ -4,6 +4,8 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+
 /**
  * @author dgaillard
  */
@@ -18,9 +20,9 @@ public class ElvisUtils {
      */
     public static String encodeDecodeSpecialCharacters(String path, boolean encode) {
         if (encode) {
-            return (path!=null)? StringUtils.replaceEachRepeatedly(path.replace("%", "%25"), new String[]{"[","]"}, new String[]{"%5B","%5D"}):null;
+            return (path!=null)? StringUtils.replaceEachRepeatedly(path.replace("%", "%25"), new String[]{"[","]", ElvisConstants.EPF_FORMAT}, new String[]{"%5B","%5D", ElvisConstants.EPF_FORMAT_ENCODED}):null;
         } else {
-            return (path!=null && path.contains("%"))?StringUtils.replaceEachRepeatedly(path, new String[]{"%5B","%5D"}, new String[]{"[","]"}).replace("%25", "%"):path;
+            return (path!=null && path.contains("%"))?StringUtils.replaceEachRepeatedly(path, new String[]{"%5B","%5D", ElvisConstants.EPF_FORMAT_ENCODED}, new String[]{"[","]", ElvisConstants.EPF_FORMAT}).replace("%25", "%"):path;
         }
     }
 

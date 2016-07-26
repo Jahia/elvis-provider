@@ -69,7 +69,6 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     @Override
     public ExternalFile getExternalFile(String path) throws PathNotFoundException {
-        path = ElvisUtils.encodeDecodeSpecialCharacters(path, false);
         if (path.equals("/")) {
             return new ExternalFile(ExternalFile.FileType.FOLDER, path, null, null);
         } else {
@@ -79,7 +78,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
             }
 
             // It's not a preview file follow the normal pattern
-            final String pathToUse = path;
+            final String pathToUse = ElvisUtils.encodeDecodeSpecialCharacters(path, false);
             try {
                 return elvisSession.execute(new BaseElvisActionCallback<ExternalFile>(elvisSession) {
                     @Override
@@ -90,11 +89,11 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                             JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
                             // Check if it's not a collection
                             if (!elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN).equals("container")) {
-                                String elPath = elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH);
-                                String fileSize = elMetadata.has(ElvisConstants.PROPERTY_FILE_SIZE) ? elMetadata.getJSONObject(ElvisConstants.PROPERTY_FILE_SIZE).getString("value") : "-1";
-                                String downloadUrl = element.getString(ElvisConstants.PROPERTY_ORIGINAL_URL);
-                                String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : ElvisConstants.DEFAULT_ELVIS_TYPE_NAME;
-                                return createExternalFile(element, elMetadata, elPath, fileSize, downloadUrl, assetDomain);
+                                return createExternalFile(element, elMetadata,
+                                        ElvisUtils.encodeDecodeSpecialCharacters(elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH), true),
+                                        elMetadata.has(ElvisConstants.PROPERTY_FILE_SIZE) ? elMetadata.getJSONObject(ElvisConstants.PROPERTY_FILE_SIZE).getString("value") : "-1",
+                                        element.getString(ElvisConstants.PROPERTY_ORIGINAL_URL),
+                                        (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : ElvisConstants.DEFAULT_ELVIS_TYPE_NAME);
                             } else {
                                 // For now collection are display as empty folder to avoid StackTrace in the tomcat console
                                 ExternalFile externalCollection = new ExternalFile(ExternalFile.FileType.FOLDER, ElvisUtils.encodeDecodeSpecialCharacters(pathToUse, true), null, null);
@@ -152,7 +151,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                     for (int i = 0; i < searchJsonArray.length(); i++) {
                         JSONObject element = searchJsonArray.getJSONObject(i);
                         JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
-                        String elPath = elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH);
+                        String elPath = ElvisUtils.encodeDecodeSpecialCharacters(elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH), true);
                         String fileSize = elMetadata.has(ElvisConstants.PROPERTY_FILE_SIZE) ? elMetadata.getJSONObject(ElvisConstants.PROPERTY_FILE_SIZE).getString("value") : "-1";
                         String downloadUrl = element.getString(ElvisConstants.PROPERTY_ORIGINAL_URL);
                         String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : ElvisConstants.DEFAULT_ELVIS_TYPE_NAME;
@@ -262,7 +261,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
     private ExternalFile createExternalFile(JSONObject element, JSONObject elMetadata, String elPath, String fileSize, String downloadUrl, String assetDomain) throws JSONException {
         Date created = elMetadata.has(ElvisConstants.PROPERTY_ASSET_CREATED) ? new Date(elMetadata.getJSONObject(ElvisConstants.PROPERTY_ASSET_CREATED).getLong("value")) : null;
         Date modified = elMetadata.has(ElvisConstants.PROPERTY_ASSET_MODIFIED) ? new Date(elMetadata.getJSONObject(ElvisConstants.PROPERTY_ASSET_MODIFIED).getLong("value")) : null;
-        ExternalFile externalFile = new ExternalFile(ExternalFile.FileType.FILE, ElvisUtils.encodeDecodeSpecialCharacters(elPath, true), created, modified);
+        ExternalFile externalFile = new ExternalFile(ExternalFile.FileType.FILE, elPath, created, modified);
 
         // Set boolean to know if we need to get the thumbnail or not
         if (element.has(ElvisConstants.PROPERTY_THUMBNAIL_URL)) {
@@ -318,7 +317,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     private ExternalFile getPreviewExternalFile(final String path) throws PathNotFoundException {
         // We need to rebuild the original path
-        final String pathToUse = ElvisUtils.getOriginalFilePath(path);
+        final String pathToUse = ElvisUtils.encodeDecodeSpecialCharacters(ElvisUtils.getOriginalFilePath(path), false);
         // Preview name we want to get
         final String previewName = StringUtils.substringBeforeLast(StringUtils.substringAfter(path, ElvisConstants.EPF_FORMAT), "_");
 
@@ -422,13 +421,13 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
 
     private String buildPreviewElPath(JSONObject elMetadata, String assetDomain, boolean isElvisDefaultPreview, Map<String, String> previewParameters) throws JSONException {
         if (isElvisDefaultPreview) {
-            return elMetadata.getString("folderPath") + "/" +
-                    StringUtils.substringBeforeLast(elMetadata.getString("filename"), ".") +
+            return ElvisUtils.encodeDecodeSpecialCharacters(elMetadata.getString("folderPath"), true) + "/" +
+                    ElvisUtils.encodeDecodeSpecialCharacters(StringUtils.substringBeforeLast(elMetadata.getString("filename"), "."), true) +
                     ElvisConstants.EPF_FORMAT + ElvisConstants.EP_PREVIEW_F + "_" + elMetadata.getString(ElvisConstants.PROPERTY_EXTENSION) +
                     "." + (assetDomain.equals("image")?"jpg":"mp4");
         } else {
-            return elMetadata.getString("folderPath") + "/" +
-                    StringUtils.substringBeforeLast(elMetadata.getString("filename"), ".") +
+            return ElvisUtils.encodeDecodeSpecialCharacters(elMetadata.getString("folderPath"), true) + "/" +
+                    ElvisUtils.encodeDecodeSpecialCharacters(StringUtils.substringBeforeLast(elMetadata.getString("filename"), "."), true) +
                     ElvisConstants.EPF_FORMAT + previewParameters.get(ElvisConstants.PROPERTY_NAME) + "_" + elMetadata.getString(ElvisConstants.PROPERTY_EXTENSION) +
                     "." + previewParameters.get(ElvisConstants.PROPERTY_EXTENSION);
         }

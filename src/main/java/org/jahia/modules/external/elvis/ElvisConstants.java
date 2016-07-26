@@ -33,6 +33,7 @@ public class ElvisConstants {
     public static String DEFAULT_ELVIS_TYPE_NAME = "file";
 
     public static String EPF_FORMAT = "_EPF-FORMAT_";
+    public static String EPF_FORMAT_ENCODED = "%5FEPF-FORMAT%5F";
     public static String EP_PREVIEW_F = "ED-preview-F";
 
     public static String PROPERTY_METADATA = "metadata";
