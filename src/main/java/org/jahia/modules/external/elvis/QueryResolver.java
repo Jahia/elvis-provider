@@ -54,7 +54,7 @@ public class QueryResolver {
     }
 
     public String resolve() throws RepositoryException {
-        StringBuffer buff = new StringBuffer();
+        StringBuilder buff = new StringBuilder();
 
         Source source = query.getSource();
         if (source instanceof Join) {
@@ -89,7 +89,7 @@ public class QueryResolver {
             if (buffer == FALSE) {
                 return null;
             } else if (buffer != TRUE) {
-                buff.append(buffer);
+                buff.append("AND(").append(buffer).append(")");
             }
         }
 
@@ -111,11 +111,9 @@ public class QueryResolver {
             if (constraint2 == FALSE) {
                 return constraint1;
             }
-            buff.append("(");
             buff.append(constraint1);
             buff.append("OR");
             buff.append(constraint2);
-            buff.append(")");
         } else if (constraint instanceof And) {
             And c = (And) constraint;
             StringBuffer constraint1 = addConstraint(c.getConstraint1());
