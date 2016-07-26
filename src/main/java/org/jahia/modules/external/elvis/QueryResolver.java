@@ -88,28 +88,26 @@ public class QueryResolver {
         }
         buff.append(")");
 
+        StringBuffer buffer = new StringBuffer();
         if (query.getConstraint() != null) {
-            StringBuffer buffer = addConstraint(query.getConstraint());
+            buffer = addConstraint(query.getConstraint());
             if (buffer == FALSE) {
                 return null;
             } else if (buffer != TRUE) {
-                buff.append(buffer);
+                buff.append("AND(").append(buffer);
             }
         }
 
         // This is code for Delta to look into their custom meta data when performing a search in DXM and not only in the default Jahia property
-        if (!isSpecificElvisNodeType && StringUtils.isNotEmpty(searchedTerm)) {
-            boolean asPrevious = false;
-            buff.append("OR").append("(");
+        if (!isSpecificElvisNodeType && StringUtils.isNotEmpty(searchedTerm) && (buffer != FALSE && buffer != TRUE)) {
             for (ElvisPropertyMapping propertyMapping : elvisTypesMapping.getProperties()) {
                 if (StringUtils.startsWith(propertyMapping.getElvisName(), "cf_")) {
-                    if (asPrevious) {
-                        buff.append("OR");
-                    }
-                    buff.append("(").append(propertyMapping.getElvisName()).append(":").append(searchedTerm).append(")");
-                    asPrevious = true;
+                    buff.append("OR(").append(propertyMapping.getElvisName()).append(":*").append(searchedTerm).append("*)");
                 }
             }
+        }
+
+        if (buffer != FALSE && buffer != TRUE) {
             buff.append(")");
         }
 
@@ -131,11 +129,9 @@ public class QueryResolver {
             if (constraint2 == FALSE) {
                 return constraint1;
             }
-            buff.append("(");
             buff.append(constraint1);
             buff.append("OR");
             buff.append(constraint2);
-            buff.append(")");
         } else if (constraint instanceof And) {
             And c = (And) constraint;
             StringBuffer constraint1 = addConstraint(c.getConstraint1());
