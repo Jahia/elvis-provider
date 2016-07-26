@@ -223,7 +223,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 for (int i = 0; i < searchJsonArray.length(); i++) {
                     JSONObject element = searchJsonArray.getJSONObject(i);
                     JSONObject elMetadata = element.getJSONObject(ElvisConstants.PROPERTY_METADATA);
-                    String originalFilePath = elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH);
+                    String originalFilePath = ElvisUtils.encodeDecodeSpecialCharacters(elMetadata.getString(ElvisConstants.PROPERTY_ASSET_PATH), true);
                     elvisSession.getElvisCacheManager().cacheLastSearchResult(element, ExternalContentStoreProvider.getCurrentSession().getUserID() + elvisSession.getMountPointPath() + originalFilePath);
 
                     String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : ElvisConstants.DEFAULT_ELVIS_TYPE_NAME;
