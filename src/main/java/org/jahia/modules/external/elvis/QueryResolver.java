@@ -76,11 +76,13 @@ public class QueryResolver {
             return null;
         }
 
+        buff.append("(");
         if (!nodeTypeName.equals(Constants.JAHIANT_FILE)) {
-            buff.append("(");
             buff.append(ElvisConstants.PROPERTY_ASSET_DOMAIN).append(":").append(elvisTypesMapping.getElvisNameAsQueryString());
-            buff.append(")");
+        } else {
+            buff.append("!").append(ElvisConstants.PROPERTY_ASSET_DOMAIN).append(":").append("container");
         }
+        buff.append(")");
 
         if (query.getConstraint() != null) {
             StringBuffer buffer = addConstraint(query.getConstraint());
