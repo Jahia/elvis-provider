@@ -156,6 +156,9 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                         String downloadUrl = element.getString(ElvisConstants.PROPERTY_ORIGINAL_URL);
                         String assetDomain = (elMetadata.has(ElvisConstants.PROPERTY_ASSET_DOMAIN)) ? elMetadata.getString(ElvisConstants.PROPERTY_ASSET_DOMAIN) : ElvisConstants.DEFAULT_ELVIS_TYPE_NAME;
 
+                        // Cache file information to avoid multiple request if using thumbnail display of the list of file
+                        elvisSession.getElvisCacheManager().cacheLastSearchResult(element, ExternalContentStoreProvider.getCurrentSession().getUserID() + elvisSession.getMountPointPath() + elPath);
+
                         files.add(createExternalFile(element, elMetadata, elPath, fileSize, downloadUrl, assetDomain));
 
                         if (elvisSession.usePreview() && (assetDomain.equals("image") || assetDomain.equals("video"))) {
