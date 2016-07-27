@@ -52,7 +52,7 @@ public class ElvisCacheManager {
         if (lastSearchResultCache == null) {
             CacheConfiguration cacheConfiguration = new CacheConfiguration();
             cacheConfiguration.setName(ELVIS_SEARCH_RESULT_CACHE);
-            cacheConfiguration.setTimeToLiveSeconds(30);
+            cacheConfiguration.setTimeToLiveSeconds(180);
             // Create a new cache with the configuration
             Ehcache cache = new Cache(cacheConfiguration);
             cache.setName(ELVIS_SEARCH_RESULT_CACHE);
