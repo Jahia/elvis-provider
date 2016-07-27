@@ -347,7 +347,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                             }
                         }
                         ExternalFile previewFile = createExternalFile(element, elMetadata, path, "-1", previewUrl, assetDomain);
-                        updatePreviewSpecificField(previewFile, (isDefaultElvisPreview) ? null : previewParameters, assetDomain, elMetadata.getString(ElvisConstants.PROPERTY_EXTENSION), isDefaultElvisPreview);
+                        updatePreviewSpecificField(previewFile, (isDefaultElvisPreview) ? null : previewParameters, assetDomain, elMetadata, isDefaultElvisPreview);
                         return previewFile;
                     }
                     throw new PathNotFoundException("Error when trying to get preview file, path was: " + pathToUse);
@@ -370,7 +370,7 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 String elPath = buildPreviewElPath(elMetadata, assetDomain, false, parameters);
 
                 ExternalFile previewFile = createExternalFile(element, elMetadata, elPath, "-1", previewUrl, assetDomain);
-                updatePreviewSpecificField(previewFile, parameters, assetDomain, elMetadata.getString(ElvisConstants.PROPERTY_EXTENSION), false);
+                updatePreviewSpecificField(previewFile, parameters, assetDomain, elMetadata, false);
 
                 files.add(previewFile);
             }
@@ -378,27 +378,40 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
             String elPath = buildPreviewElPath(elMetadata, assetDomain, true, null);
 
             ExternalFile previewFile = createExternalFile(element, elMetadata, elPath, "-1", element.getString(ElvisConstants.PROPERTY_PREVIEW_URL), assetDomain);
-            updatePreviewSpecificField(previewFile, null, assetDomain, elMetadata.getString(ElvisConstants.PROPERTY_EXTENSION), true);
+            updatePreviewSpecificField(previewFile, null, assetDomain, elMetadata, true);
 
             files.add(previewFile);
         }
     }
 
-    private void updatePreviewSpecificField(ExternalFile previewFile, Map<String, String> previewParameters, String assetDomain, String extension, boolean isDefaultElvisPreview) {
+    private void updatePreviewSpecificField(ExternalFile previewFile, Map<String, String> previewParameters, String assetDomain, JSONObject elMetadata, boolean isDefaultElvisPreview) throws JSONException {
         previewFile.getMixin().add(ElvisConstants.ELVISMIX_PREVIEW_FILE);
         previewFile.getProperties().put("previewFormatName", new String[]{(previewParameters != null)?previewParameters.get(ElvisConstants.PROPERTY_NAME):ElvisConstants.EP_PREVIEW_F});
-        previewFile.getProperties().put("previewOriginalExtension", new String[]{extension});
+        previewFile.getProperties().put("previewOriginalExtension", new String[]{elMetadata.getString(ElvisConstants.PROPERTY_EXTENSION)});
         if (assetDomain.equals("image")) {
+            String width;
+            String height;
             if (isDefaultElvisPreview) {
                 previewFile.setContentType("image/jpeg");
-                previewFile.getProperties().put("j:width", new String[]{"1600"});
-                previewFile.getProperties().put("j:height", new String[]{"1600"});
+                width = "1600";
+                height = "1600";
+                if (elMetadata.has("width") || elMetadata.has("height")) {
+                    Map<String, String> size = calculatePreviewSize(Double.parseDouble(width), Double.parseDouble(height), Double.parseDouble(elMetadata.getString("width")), Double.parseDouble(elMetadata.getString("height")));
+                    width = size.get("width");
+                    height = size.get("height");
+                }
             } else {
                 previewFile.setContentType("image/" + (previewParameters.get(ElvisConstants.PROPERTY_EXTENSION).equals("jpg") ? "jpeg" : previewParameters.get(ElvisConstants.PROPERTY_EXTENSION)));
-                elvisSession.getPreviewSettings().get("image");
-                previewFile.getProperties().put("j:width", new String[]{previewParameters.get("maxWidth")});
-                previewFile.getProperties().put("j:height", new String[]{previewParameters.get("maxHeight")});
+                width = previewParameters.get("maxWidth");
+                height = previewParameters.get("maxHeight");
+                if (elMetadata.has("width") || elMetadata.has("height")) {
+                    Map<String, String> size = calculatePreviewSize(Double.parseDouble(width), Double.parseDouble(height), Double.parseDouble(elMetadata.getString("width")), Double.parseDouble(elMetadata.getString("height")));
+                    width = size.get("width");
+                    height = size.get("height");
+                }
             }
+            previewFile.getProperties().put("j:width", new String[]{width});
+            previewFile.getProperties().put("j:height", new String[]{height});
         } else {
             if (isDefaultElvisPreview) {
                 previewFile.setContentType("video/mp4");
@@ -406,6 +419,30 @@ public class ElvisDataSource extends FilesDataSource implements ExternalDataSour
                 previewFile.setContentType("video/" + (previewParameters.get(ElvisConstants.PROPERTY_EXTENSION).equals("flv") ? "x-flv" : previewParameters.get(ElvisConstants.PROPERTY_EXTENSION)));
             }
         }
+    }
+
+    private Map<String, String> calculatePreviewSize(Double targetWidth, Double targetHeight, Double originalWidth, Double originalHeight) {
+        Map<String, String> value = new HashMap<>();
+        double ratio;
+        if (originalWidth > targetWidth || originalHeight > targetHeight) {
+
+            ratio = originalWidth / originalHeight;
+            if (ratio < 1) {
+                targetWidth = targetHeight * ratio;
+                targetHeight = targetWidth / ratio;
+            } else {
+                targetHeight = targetWidth / ratio;
+                targetWidth = targetHeight * ratio;
+            }
+        } else {
+            targetHeight = originalHeight;
+            targetWidth = originalWidth;
+        }
+        Integer tw = targetWidth.intValue();
+        Integer th = targetHeight.intValue();
+        value.put("width", tw.toString());
+        value.put("height", th.toString());
+        return value;
     }
 
     private String buildPreviewUrl(JSONObject element, String assetDomain, Map<String, String> parameters) throws JSONException {
